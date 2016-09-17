@@ -1,0 +1,20 @@
+version: 1.0.1-{build}
+pull_requests:
+  do_not_increment_build_number: true
+configuration: Release
+nuget:
+  account_feed: true
+  project_feed: true
+  disable_publish_on_pr: true
+before_build:
+- ps: dotnet restore
+build:
+  project: CoreFtp.sln
+  publish_nuget: true
+  publish_nuget_symbols: true
+  include_nuget_references: true
+  parallel: true
+  verbosity: minimal
+test: off
+artifacts:
+- path: src\CoreFtp\bin\Release\CoreFtp.*.nupkg

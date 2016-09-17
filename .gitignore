@@ -1,0 +1,49 @@
+syntax: glob
+	
+### VisualStudio ###
+
+# NodeJS
+**/node_modules/*
+
+# Tool Runtime Dir
+/[Tt]ools/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.xproj.user
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+[Bb]in/
+[Oo]bj/
+msbuild.log
+msbuild.err
+msbuild.wrn
+
+# Cross building rootfs
+cross/rootfs/
+
+# Visual Studio 2015
+.vs/
+
+### OSX ###
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+/Source/packages/*
+.vs
+*DS_Store
+project.lock.json
+

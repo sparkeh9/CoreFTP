@@ -1,0 +1,35 @@
+{
+    "title": "CoreFTP",
+    "version": "1.0.1-*",
+    "copyright": "Nick Briscoe 2016",
+    "language": "en",
+
+    "authors": ["Nick Briscoe"],
+    "description": "A simple .NET FTP library written entirely in C#, with no external dependencies",
+
+    "dependencies": {
+        "NETStandard.Library": "1.6.0"
+
+    },
+
+    "frameworks": {
+        "netstandard1.3": {
+            "buildOptions": {
+                "define": ["NETSTANDARD"]
+            },
+            "imports": "dnxcore50",
+            "dependencies": {
+                "System.Reflection.TypeExtensions": "4.1.0",
+                "System.Threading.Tasks": "4.0.11"
+            }
+        },
+        "net452": {
+        
+        }
+    },
+    "scripts": {
+        "postcompile": [
+            "dotnet pack --no-build --configuration %compile:Configuration%"
+        ]
+    }
+}
