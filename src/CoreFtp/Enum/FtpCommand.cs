@@ -21,6 +21,7 @@
         [ FtpCommandValue( "MKD" ) ] MKD,
         [ FtpCommandValue( "RMD" ) ] RMD,
         [ FtpCommandValue( "RNFR" ) ] RNFR,
-        [ FtpCommandValue( "RNTO" ) ] RNTO
+        [ FtpCommandValue( "RNTO" ) ] RNTO,
+        [ FtpCommandValue( "SIZE" ) ] SIZE
     }
 }

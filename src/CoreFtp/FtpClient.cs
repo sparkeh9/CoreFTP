@@ -130,27 +130,33 @@
                 throw new FtpException( response.ResponseMessage );
         }
 
+        /// <summary>
+        /// Renames a file on the FTP server
+        /// </summary>
+        /// <param name="from"></param>
+        /// <param name="to"></param>
+        /// <returns></returns>
         public async Task RenameAsync( string from, string to )
         {
             EnsureLoggedIn();
 
-            var rnfrResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.RNFR,
-                                                           Data = from
-                                                       } );
+            var renameFromResponse = await SendCommandAsync( new FtpCommandEnvelope
+                                                             {
+                                                                 FtpCommand = FtpCommand.RNFR,
+                                                                 Data = from
+                                                             } );
 
-            if ( rnfrResponse.FtpStatusCode != FtpStatusCode.FileCommandPending )
-                throw new FtpException( rnfrResponse.ResponseMessage );
+            if ( renameFromResponse.FtpStatusCode != FtpStatusCode.FileCommandPending )
+                throw new FtpException( renameFromResponse.ResponseMessage );
 
-            var rntoResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.RNTO,
-                                                           Data = to
-                                                       } );
+            var renameToResponse = await SendCommandAsync( new FtpCommandEnvelope
+                                                           {
+                                                               FtpCommand = FtpCommand.RNTO,
+                                                               Data = to
+                                                           } );
 
-            if ( rntoResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
-                throw new FtpException( rnfrResponse.ResponseMessage );
+            if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
+                throw new FtpException( renameFromResponse.ResponseMessage );
         }
 
         /// <summary>
@@ -241,7 +247,7 @@
             return await ListNodeTypeAsync( FtpNodeType.Directory );
         }
 
-
+ 
         /// <summary>
         /// Lists all directories in the current working directory
         /// </summary>
@@ -258,6 +264,22 @@
 
             if ( deleResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
                 throw new FtpException( deleResponse.ResponseMessage );
+        }
+
+        public async Task<long> GetFileSizeAsync( string fileName )
+        {
+            EnsureLoggedIn();
+            var sizeResponse = await SendCommandAsync( new FtpCommandEnvelope
+                                                      {
+                                                           FtpCommand = FtpCommand.SIZE,
+                                                           Data = fileName
+                                                       } );
+
+            if ( sizeResponse.FtpStatusCode != FtpStatusCode.FileStatus )
+                throw new FtpException( sizeResponse.ResponseMessage );
+
+            long fileSize = long.Parse( sizeResponse.ResponseMessage.Substring( 4 ) );
+            return fileSize;
         }
 
 
