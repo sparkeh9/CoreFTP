@@ -5,6 +5,7 @@
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
+    using System.Linq.Expressions;
     using System.Net.Sockets;
     using System.Text;
     using System.Threading.Tasks;
@@ -214,11 +215,11 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
-            return await OpenFileStreamAsync( fileName, FtpCommand.STOR );
+            return new FtpFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
         }
 
         /// <summary>
-        /// Closes the write stream and associated socket (if open)
+        /// Closes the write stream and associated socket (if open), 
         /// </summary>
         /// <returns></returns>
         public async Task CloseFileWriteStreamAsync()

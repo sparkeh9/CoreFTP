@@ -48,7 +48,6 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
     {
         var fileReadStream = fileinfo.OpenRead();
         await fileReadStream.CopyToAsync( writeStream );
-		await ftpClient.CloseFileWriteStreamAsync();
     }
 }
 

@@ -19,7 +19,6 @@
             {
                 await sut.LoginAsync();
                 var files = await sut.ListFilesAsync();
-                await sut.LogOutAsync();
 
                 files.Any( x => x.Name == "test.png" ).Should().BeTrue();
             }
@@ -38,7 +37,6 @@
                 await sut.LoginAsync();
                 await sut.ChangeWorkingDirectoryAsync( "test1" );
                 var files = await sut.ListFilesAsync();
-                await sut.LogOutAsync();
 
                 files.Any( x => x.Name == "test.png" ).Should().BeTrue();
             }

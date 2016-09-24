@@ -61,7 +61,6 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                     await fileReadStream.CopyToAsync( writeStream );
                 }
 
-                await sut.CloseFileWriteStreamAsync();
                 ( await sut.ListFilesAsync() ).Any( x => x.Name == originalFilename ).Should().BeTrue();
 
 

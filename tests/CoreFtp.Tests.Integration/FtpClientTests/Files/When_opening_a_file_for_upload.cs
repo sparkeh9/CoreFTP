@@ -26,7 +26,6 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
-                    await sut.CloseFileWriteStreamAsync();
                 }
 
                 var files = await sut.ListFilesAsync();
@@ -53,12 +52,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
-                    await sut.CloseFileWriteStreamAsync();
-
-                    var files = await sut.ListFilesAsync();
-
-                    files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
                 }
+
+
+                var files = await sut.ListFilesAsync();
+
+                files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
             }
         }
     }

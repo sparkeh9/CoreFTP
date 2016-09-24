@@ -25,7 +25,6 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
-                    await sut.CloseFileWriteStreamAsync();
                 }
 
                 ( await sut.ListFilesAsync() ).Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
