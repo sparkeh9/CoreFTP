@@ -21,7 +21,7 @@
                 var files = await sut.ListFilesAsync();
                 await sut.LogOutAsync();
 
-                files.Any( x => x == "test.png" ).Should().BeTrue();
+                files.Any( x => x.Name == "test.png" ).Should().BeTrue();
             }
         }
 
@@ -40,7 +40,7 @@
                 var files = await sut.ListFilesAsync();
                 await sut.LogOutAsync();
 
-                files.Any( x => x == "test.png" ).Should().BeTrue();
+                files.Any( x => x.Name == "test.png" ).Should().BeTrue();
             }
         }
     }

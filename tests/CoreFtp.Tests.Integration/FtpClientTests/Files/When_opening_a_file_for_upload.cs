@@ -31,7 +31,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
                 var files = await sut.ListFilesAsync();
 
-                files.Any( x => x == "uploaded_penguin.jpg" ).Should().BeTrue();
+                files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
             }
         }
 
@@ -57,7 +57,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
                     var files = await sut.ListFilesAsync();
 
-                    files.Any( x => x == "uploaded_penguin.jpg" ).Should().BeTrue();
+                    files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
                 }
             }
         }

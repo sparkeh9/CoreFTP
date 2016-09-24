@@ -1,4 +1,7 @@
 # CoreFTP
+
+[![Build Status: Windows](https://ci.appveyor.com/api/projects/status/github/sparkeh9/coreftp?branch=master&svg=true)](https://ci.appveyor.com/api/projects/status/github/sparkeh9/coreftp?branch=master&svg=true)
+
 CoreFTP is a simple .NET FTP library written entirely in C#, with no external dependencies.
 NuGet page is at: https://www.nuget.org/packages/CoreFtp/
 

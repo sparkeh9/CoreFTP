@@ -25,7 +25,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 await sut.DeleteDirectoryAsync( randomDirectoryName );
                 await sut.LogOutAsync();
 
-                directories.Any( x => x == randomDirectoryName ).Should().BeTrue();
+                directories.Any( x => x.Name == randomDirectoryName ).Should().BeTrue();
             }
         }
     }

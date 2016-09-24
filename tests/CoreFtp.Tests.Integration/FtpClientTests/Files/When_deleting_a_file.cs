@@ -28,11 +28,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                     await sut.CloseFileWriteStreamAsync();
                 }
 
-                ( await sut.ListFilesAsync() ).Any( x => x == "uploaded_penguin.jpg" ).Should().BeTrue();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
 
                 await sut.DeleteFileAsync( "uploaded_penguin.jpg" );
 
-                ( await sut.ListFilesAsync() ).Any( x => x == "uploaded_penguin.jpg" ).Should().BeFalse();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeFalse();
             }
         }
     }

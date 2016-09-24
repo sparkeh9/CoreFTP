@@ -26,13 +26,13 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                 await sut.CreateDirectoryAsync( oldRandomDirectoryName );
 
 
-                ( await sut.ListDirectoriesAsync() ).Any( x => x == oldRandomDirectoryName ).Should().BeTrue();
+                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == oldRandomDirectoryName ).Should().BeTrue();
 
                 await sut.RenameAsync( oldRandomDirectoryName, newRandomDirectoryName );
 
                 var directoriesAfterRename = ( await sut.ListDirectoriesAsync() );
-                directoriesAfterRename.Any( x => x == oldRandomDirectoryName ).Should().BeFalse();
-                directoriesAfterRename.Any( x => x == newRandomDirectoryName ).Should().BeTrue();
+                directoriesAfterRename.Any( x => x.Name == oldRandomDirectoryName ).Should().BeFalse();
+                directoriesAfterRename.Any( x => x.Name == newRandomDirectoryName ).Should().BeTrue();
 
                 await sut.DeleteDirectoryAsync( newRandomDirectoryName );
                 await sut.LogOutAsync();
@@ -62,14 +62,14 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                 }
 
                 await sut.CloseFileWriteStreamAsync();
-                ( await sut.ListFilesAsync() ).Any( x => x == originalFilename ).Should().BeTrue();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == originalFilename ).Should().BeTrue();
 
 
                 await sut.RenameAsync( originalFilename, newFilename );
 
                 var filesAfterRename = await sut.ListFilesAsync();
-                filesAfterRename.Any( x => x == originalFilename ).Should().BeFalse();
-                filesAfterRename.Any( x => x == newFilename ).Should().BeTrue();
+                filesAfterRename.Any( x => x.Name == originalFilename ).Should().BeFalse();
+                filesAfterRename.Any( x => x.Name == newFilename ).Should().BeTrue();
 
                 await sut.DeleteFileAsync( newFilename );
             }

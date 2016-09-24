@@ -1,5 +1,8 @@
 ﻿namespace CoreFtp.Extensions
 {
+    using System;
+    using System.Globalization;
+    using System.Linq;
     using System.Text.RegularExpressions;
 
     public static class StringExtensions
@@ -24,6 +27,21 @@
                 return null;
 
             return int.Parse( match.Groups[ "PortNumber" ].Value );
+        }
+
+
+        public static FtpNodeInformation ToFtpNode( this string operand )
+        {
+            var dictionary = operand.Split( ';' )
+                                    .Select( s => s.Split( '=' ) )
+                                    .ToDictionary( strings => strings.Length == 2 ? strings[ 0 ] : "name", strings => strings.Length == 2 ? strings[ 1 ] : strings[ 0 ] );
+
+            return new FtpNodeInformation
+            {
+                Name = dictionary.GetValueOrDefault( "name" ).Trim(),
+                Size = dictionary.GetValueOrDefault( "size" ).ParseOrDefault(),
+                DateModified = dictionary.GetValueOrDefault( "modify" ).ParseExactOrDefault( "yyyyMMddHHmmss" )
+            };
         }
     }
 }

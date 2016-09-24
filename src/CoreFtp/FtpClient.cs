@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
@@ -233,7 +234,7 @@
         /// Lists all files in the current working directory
         /// </summary>
         /// <returns></returns>
-        public async Task<ReadOnlyCollection<string>> ListFilesAsync()
+        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
             return await ListNodeTypeAsync( FtpNodeType.File );
         }
@@ -242,12 +243,12 @@
         /// Lists all directories in the current working directory
         /// </summary>
         /// <returns></returns>
-        public async Task<ReadOnlyCollection<string>> ListDirectoriesAsync()
+        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
             return await ListNodeTypeAsync( FtpNodeType.Directory );
         }
 
- 
+
         /// <summary>
         /// Lists all directories in the current working directory
         /// </summary>
@@ -270,7 +271,7 @@
         {
             EnsureLoggedIn();
             var sizeResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                      {
+                                                       {
                                                            FtpCommand = FtpCommand.SIZE,
                                                            Data = fileName
                                                        } );
@@ -341,7 +342,7 @@
         /// </summary>
         /// <param name="ftpNodeType"></param>
         /// <returns></returns>
-        private async Task<ReadOnlyCollection<string>> ListNodeTypeAsync( FtpNodeType ftpNodeType )
+        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType ftpNodeType )
         {
             string nodeTypeString = ftpNodeType == FtpNodeType.File
                 ? "file"
@@ -380,13 +381,14 @@
 
             await GetResponseAsync();
 
-            var nodes = csv.Replace( CARRIAGE_RETURN, string.Empty )
-                           .Split( LINEFEED )
-                           .Where( x => x.Contains( $"type={nodeTypeString}" ) )
-                           .Select( x => x.Split( ';' ).Last().Trim() );
 
+            var nodes = ( from node in csv.Replace( CARRIAGE_RETURN, string.Empty )
+                                          .Split( LINEFEED )
+                          where node.Contains( $"type={nodeTypeString}" )
+                          select node.ToFtpNode() )
+                .ToList();
 
-            return nodes.ToList().AsReadOnly();
+            return nodes.AsReadOnly();
         }
 
         /// <summary>

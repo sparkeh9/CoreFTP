@@ -22,8 +22,8 @@
                 await sut.LogOutAsync();
 
 
-                files.Any(x => x == "test1" ).Should().BeTrue();
-                files.Any(x => x == "test2" ).Should().BeTrue();
+                files.Any( x => x.Name == "test1" ).Should().BeTrue();
+                files.Any( x => x.Name == "test2" ).Should().BeTrue();
             }
         }
 
@@ -42,7 +42,8 @@
                 var files = await sut.ListDirectoriesAsync();
                 await sut.LogOutAsync();
 
-                files.Count.Should().Be( 2 );
+                files.Any( x => x.Name == "test1_1" ).Should().BeTrue();
+                files.Any( x => x.Name == "test1_2" ).Should().BeTrue();
             }
         }
     }
