@@ -514,7 +514,7 @@
 
         public void Dispose()
         {
-            LogOutAsync().GetAwaiter().GetResult();
+            Task.WaitAny( LogOutAsync(), Task.Delay( 250 ) );
             commandSocket?.Dispose();
             dataSocket?.Dispose();
         }
