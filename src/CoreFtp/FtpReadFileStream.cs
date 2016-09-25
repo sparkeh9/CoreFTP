@@ -32,10 +32,8 @@ namespace CoreFtp
         {
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
-            var fileRetrievalResult = client.GetResponseAsync().GetAwaiter().GetResult();
 
-            if ( fileRetrievalResult.FtpStatusCode != FtpStatusCode.ClosingData )
-                throw new FtpException( fileRetrievalResult.ResponseMessage );
+            Task.WaitAny( client.GetResponseAsync(), Task.Delay( 250 ) );
         }
 
         public override async Task FlushAsync( CancellationToken cancellationToken )

@@ -31,7 +31,8 @@
         {
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
-            client.CloseFileWriteStreamAsync().GetAwaiter().GetResult();
+
+            Task.WaitAny( client.CloseFileWriteStreamAsync(), Task.Delay( 250 ) );
         }
 
         public override async Task FlushAsync( CancellationToken cancellationToken )
