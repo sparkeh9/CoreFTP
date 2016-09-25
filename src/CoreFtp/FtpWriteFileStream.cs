@@ -4,7 +4,7 @@
     using System.IO;
     using System.Threading;
 
-    public class FtpFileStream : Stream
+    public class FtpWriteFileStream : Stream
     {
         private readonly Stream encapsulatedStream;
         private readonly FtpClient client;
@@ -21,7 +21,7 @@
         }
 
 
-        public FtpFileStream( Stream encapsulatedStream, FtpClient client )
+        public FtpWriteFileStream( Stream encapsulatedStream, FtpClient client )
         {
             this.encapsulatedStream = encapsulatedStream;
             this.client = client;

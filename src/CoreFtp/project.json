@@ -1,15 +1,17 @@
 {
     "title": "CoreFTP",
-    "version": "1.0.4-*",
+    "version": "1.0.5-*",
     "copyright": "Nick Briscoe 2016",
     "language": "en",
+    "packOptions": {
+        "projectUrl": "https://github.com/sparkeh9/CoreFTP"
+    },
 
     "authors": ["Nick Briscoe"],
     "description": "A simple .NET FTP library written entirely in C#, with no external dependencies",
 
     "dependencies": {
         "NETStandard.Library": "1.6.0"
-
     },
 
     "frameworks": {

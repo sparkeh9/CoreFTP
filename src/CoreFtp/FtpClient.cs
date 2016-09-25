@@ -205,7 +205,7 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileReadStreamAsync( string fileName )
         {
-            return await OpenFileStreamAsync( fileName, FtpCommand.RETR );
+            return new FtpReadFileStream( await OpenFileStreamAsync( fileName, FtpCommand.RETR ), this );
         }
 
         /// <summary>
@@ -215,7 +215,7 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
-            return new FtpFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
+            return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
         }
 
         /// <summary>
@@ -475,7 +475,7 @@
         /// Retrieves the latest response from the FTP server on the command socket
         /// </summary>
         /// <returns></returns>
-        private async Task<FtpResponse> GetResponseAsync()
+        public async Task<FtpResponse> GetResponseAsync()
         {
             return await Task.Run( () =>
                                    {
