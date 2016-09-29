@@ -107,7 +107,12 @@
             if ( response.FtpStatusCode != FtpStatusCode.FileActionOK )
                 throw new FtpException( response.ResponseMessage );
 
-            WorkingDirectory = response.ResponseMessage.Split( '"' )[ 1 ];
+            var pwdResponse = await SendCommandAsync( FtpCommand.PWD );
+
+            if ( pwdResponse.FtpStatusCode != FtpStatusCode.PathnameCreated )
+                throw new FtpException( response.ResponseMessage );
+
+            WorkingDirectory = pwdResponse.ResponseMessage.Split( '"' )[ 1 ];
         }
 
         /// <summary>
