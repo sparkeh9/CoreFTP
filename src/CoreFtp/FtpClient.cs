@@ -362,7 +362,7 @@
             var mlsdResult = await SendCommandAsync( FtpCommand.MLSD );
 
             if ( ( mlsdResult.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( mlsdResult.FtpStatusCode != FtpStatusCode.OpeningData ) )
-                throw new FtpException( "Could not list files, " + mlsdResult.ResponseMessage );
+                throw new FtpException( "Could not retrieve directory listing " + mlsdResult.ResponseMessage );
 
             var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
             bool hasTimedOut;
