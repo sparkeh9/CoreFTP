@@ -62,6 +62,8 @@
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
 
+            await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
+
             if ( configuration.BaseDirectory != "/" )
             {
                 await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
@@ -271,6 +273,33 @@
                 throw new FtpException( deleResponse.ResponseMessage );
         }
 
+        /// <summary>
+        /// Determines the file size of the given file
+        /// </summary>
+        /// <param name="transferMode"></param>
+        /// <param name="secondType"></param>
+        /// <returns></returns>
+        public async Task SetTransferMode( FtpTransferMode transferMode, char secondType = '\0' )
+        {
+            EnsureLoggedIn();
+
+            var typeResponse = await SendCommandAsync( new FtpCommandEnvelope
+                                                       {
+                                                           FtpCommand = FtpCommand.TYPE,
+                                                           Data = secondType != '\0'
+                                                               ? $"{(char) transferMode} {secondType}"
+                                                               : $"{(char) transferMode}"
+                                                       } );
+
+            if ( typeResponse.FtpStatusCode != FtpStatusCode.CommandOK )
+                throw new FtpException( typeResponse.ResponseMessage );
+        }
+
+        /// <summary>
+        /// Determines the file size of the given file
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <returns></returns>
         public async Task<long> GetFileSizeAsync( string fileName )
         {
             EnsureLoggedIn();

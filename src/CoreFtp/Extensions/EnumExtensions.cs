@@ -4,9 +4,7 @@
 #if NETSTANDARD
     using System.Reflection;
 #endif
-    using Attributes;
     using Enum;
-    using System.Linq;
 
     public static class EnumExtensions
     {
@@ -34,12 +32,8 @@
         public static string ToCommandString( this FtpCommand operand )
         {
             string name = operand.ToString();
-            var ftpCommandValue = operand.GetType()
-                                         .GetField( name )
-                                         .GetCustomAttributes( typeof( FtpCommandValueAttribute ), false )
-                                         .FirstOrDefault() as FtpCommandValueAttribute;
 
-            return ftpCommandValue?.Command;
+            return name;
         }
     }
 }

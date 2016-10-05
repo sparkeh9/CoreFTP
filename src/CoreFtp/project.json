@@ -1,10 +1,11 @@
 {
     "title": "CoreFTP",
-    "version": "1.0.7-*",
+    "version": "1.0.8-*",
     "copyright": "Nick Briscoe 2016",
     "language": "en",
     "packOptions": {
-        "projectUrl": "https://github.com/sparkeh9/CoreFTP"
+        "projectUrl": "https://github.com/sparkeh9/CoreFTP",
+        "tags": ["ftp", "core", "vnext"]
     },
 
     "authors": ["Nick Briscoe"],

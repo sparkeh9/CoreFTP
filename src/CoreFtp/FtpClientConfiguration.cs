@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp
 {
     using System;
+    using Enum;
 
     public class FtpClientConfiguration
     {
@@ -11,5 +12,7 @@
         public string Username { get; set; }
         public string Password { get; set; }
         public string BaseDirectory { get; set; } = "/";
+        public FtpTransferMode Mode { get; set; } = FtpTransferMode.Binary;
+        public char ModeSecondType { get; set; } = '\0';
     }
 }
