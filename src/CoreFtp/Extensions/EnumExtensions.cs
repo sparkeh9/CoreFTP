@@ -28,12 +28,5 @@
 
             return null;
         }
-
-        public static string ToCommandString( this FtpCommand operand )
-        {
-            string name = operand.ToString();
-
-            return name;
-        }
     }
 }

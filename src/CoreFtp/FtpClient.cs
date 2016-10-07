@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
@@ -63,11 +64,7 @@
             IsAuthenticated = true;
 
             await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
-
-            if ( configuration.BaseDirectory != "/" )
-            {
-                await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
-            }
+            await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
         }
 
         /// <summary>
@@ -75,15 +72,12 @@
         /// </summary>
         public async Task LogOutAsync()
         {
-            await Task.Run( async () =>
-                            {
-                                if ( !IsConnected )
-                                    return;
+            if ( !IsConnected )
+                return;
 
-                                await SendCommandAsync( FtpCommand.QUIT );
-                                commandSocket.Shutdown( SocketShutdown.Both );
-                                IsAuthenticated = false;
-                            } );
+            await SendCommandAsync( FtpCommand.QUIT );
+            commandSocket.Shutdown( SocketShutdown.Both );
+            IsAuthenticated = false;
         }
 
         /// <summary>
@@ -127,14 +121,7 @@
 
             EnsureLoggedIn();
 
-            var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                   {
-                                                       FtpCommand = FtpCommand.MKD,
-                                                       Data = directory
-                                                   } );
-
-            if ( response.FtpStatusCode != FtpStatusCode.FileActionOK && response.FtpStatusCode != FtpStatusCode.PathnameCreated )
-                throw new FtpException( response.ResponseMessage );
+            await CreateDirectoryStructureRecursively( directory.Split( '/' ) );
         }
 
         /// <summary>
@@ -178,14 +165,14 @@
 
             EnsureLoggedIn();
 
-            var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                   {
-                                                       FtpCommand = FtpCommand.RMD,
-                                                       Data = directory
-                                                   } );
+            var rmdResponse = await SendCommandAsync( new FtpCommandEnvelope
+                                                      {
+                                                          FtpCommand = FtpCommand.RMD,
+                                                          Data = directory
+                                                      } );
 
-            if ( response.FtpStatusCode != FtpStatusCode.FileActionOK )
-                throw new FtpException( response.ResponseMessage );
+            if ( rmdResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
+                throw new FtpException( rmdResponse.ResponseMessage );
         }
 
         /// <summary>
@@ -220,7 +207,58 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
+            var segments = fileName.Split( '/' );
+            await CreateDirectoryStructureRecursively( segments.Take( segments.Length - 1 ).ToArray() );
             return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
+        }
+
+
+        /// <summary>
+        /// Creates a directory structure recursively given a path
+        /// </summary>
+        /// <param name="path"></param>
+        /// <returns></returns>
+        private async Task CreateDirectoryStructure( string path )
+        {
+            await CreateDirectoryStructureRecursively( path.Split( '/' ) );
+        }
+
+        /// <summary>
+        /// Creates a directory structure recursively given a path
+        /// </summary>
+        /// <param name="directories"></param>
+        /// <returns></returns>
+        private async Task CreateDirectoryStructureRecursively( IReadOnlyList<string> directories )
+        {
+            string originalPath = WorkingDirectory;
+
+            if ( directories.Count > 1 )
+            {
+                foreach ( string directory in directories )
+                {
+                    var response = await SendCommandAsync( new FtpCommandEnvelope
+                                                           {
+                                                               FtpCommand = FtpCommand.CWD,
+                                                               Data = directory
+                                                           } );
+
+                    if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
+                        continue;
+
+                    await SendCommandAsync( new FtpCommandEnvelope
+                                            {
+                                                FtpCommand = FtpCommand.MKD,
+                                                Data = directory
+                                            } );
+                    await SendCommandAsync( new FtpCommandEnvelope
+                                            {
+                                                FtpCommand = FtpCommand.CWD,
+                                                Data = directory
+                                            } );
+                }
+
+                await ChangeWorkingDirectoryAsync( originalPath );
+            }
         }
 
         /// <summary>

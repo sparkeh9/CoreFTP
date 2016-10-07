@@ -10,7 +10,7 @@
 
         public string GetCommandString()
         {
-            string command = FtpCommand.ToCommandString();
+            string command = FtpCommand.ToString();
 
             return Data.IsNullOrEmpty()
                 ? command
