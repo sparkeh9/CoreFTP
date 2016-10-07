@@ -426,40 +426,60 @@
             if ( dataSocket == null )
                 throw new FtpException( "Could not establish a data connection" );
 
-            var mlsdResult = await SendCommandAsync( FtpCommand.MLSD );
+            var usingMlsd = true;
+            var result = await SendCommandAsync( FtpCommand.MLSD );
 
-            if ( ( mlsdResult.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( mlsdResult.FtpStatusCode != FtpStatusCode.OpeningData ) )
-                throw new FtpException( "Could not retrieve directory listing " + mlsdResult.ResponseMessage );
+            if (result.FtpStatusCode == FtpStatusCode.CommandSyntaxError || result.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
+            {
+                usingMlsd = false;
+                result = await SendCommandAsync( FtpCommand.NLST );
+            }
+
+            if ( (result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && (result.FtpStatusCode != FtpStatusCode.OpeningData ) )
+                throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
 
             var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
             bool hasTimedOut;
 
-            string csv = string.Empty;
+            var rawResult = new StringBuilder();
 
-            do
+                do
+                {
+                    var buffer = new byte[BUFFER_SIZE];
+
+                    int byteCount = dataSocket.Receive(buffer, buffer.Length, 0);
+                    if (byteCount == 0) break;
+
+                    rawResult.Append(Encoding.ASCII.GetString(buffer, 0, byteCount));
+
+                    hasTimedOut = (configuration.TimeoutSeconds == 0) || (DateTime.Now < maxTime);
+                } while (hasTimedOut);
+
+                dataSocket.Shutdown(SocketShutdown.Both);
+
+                await GetResponseAsync();
+
+            var lines = rawResult.Replace(CARRIAGE_RETURN, string.Empty).ToString().Split(LINEFEED);
+            if (usingMlsd)
             {
-                var buffer = new byte[BUFFER_SIZE];
+                var nodes = (from node in lines
+                             where node.Contains($"type={nodeTypeString}")
+                             select node.ToFtpNode())
+                    .ToList();
 
-                int byteCount = dataSocket.Receive( buffer, buffer.Length, 0 );
-                csv += Encoding.ASCII.GetString( buffer, 0, byteCount );
+                return nodes.AsReadOnly();
+            }
+            else
+            {
+                var nodes = (from name in lines
+                            select new FtpNodeInformation
+                            {
+                                Name = name,
+                            })
+                    .ToList();
 
-                if ( byteCount == 0 ) break;
-
-                hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
-            } while ( hasTimedOut );
-
-            dataSocket.Shutdown( SocketShutdown.Both );
-
-            await GetResponseAsync();
-
-
-            var nodes = ( from node in csv.Replace( CARRIAGE_RETURN, string.Empty )
-                                          .Split( LINEFEED )
-                          where node.Contains( $"type={nodeTypeString}" )
-                          select node.ToFtpNode() )
-                .ToList();
-
-            return nodes.AsReadOnly();
+                return nodes.AsReadOnly();
+            }
         }
 
         /// <summary>
