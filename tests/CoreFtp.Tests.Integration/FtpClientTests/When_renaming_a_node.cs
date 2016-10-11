@@ -49,28 +49,21 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                                                  Password = "password"
                                              } ) )
             {
+                string originalRandomFileName = $"{Guid.NewGuid()}.jpg";
+                string subsequentlyRenamedRandomFileName = $"{Guid.NewGuid()}.jpg";
+
                 await sut.LoginAsync();
-                var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );
+                await sut.CreateTestResourceWithNameAsync( "penguin.jpg", originalRandomFileName );
 
-                var originalFilename = "original_penguin.jpg";
-                var newFilename = $"renamed_penguin{Guid.NewGuid()}.jpg";
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == originalRandomFileName ).Should().BeTrue();
 
-                using ( var writeStream = await sut.OpenFileWriteStreamAsync( originalFilename ) )
-                {
-                    var fileReadStream = fileinfo.OpenRead();
-                    await fileReadStream.CopyToAsync( writeStream );
-                }
-
-                ( await sut.ListFilesAsync() ).Any( x => x.Name == originalFilename ).Should().BeTrue();
-
-
-                await sut.RenameAsync( originalFilename, newFilename );
+                await sut.RenameAsync( originalRandomFileName, subsequentlyRenamedRandomFileName );
 
                 var filesAfterRename = await sut.ListFilesAsync();
-                filesAfterRename.Any( x => x.Name == originalFilename ).Should().BeFalse();
-                filesAfterRename.Any( x => x.Name == newFilename ).Should().BeTrue();
+                filesAfterRename.Any( x => x.Name == originalRandomFileName ).Should().BeFalse();
+                filesAfterRename.Any( x => x.Name == subsequentlyRenamedRandomFileName ).Should().BeTrue();
 
-                await sut.DeleteFileAsync( newFilename );
+                await sut.DeleteFileAsync( subsequentlyRenamedRandomFileName );
             }
         }
     }

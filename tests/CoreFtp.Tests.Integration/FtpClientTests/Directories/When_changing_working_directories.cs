@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 {
     using System;
+    using System.Linq;
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
@@ -26,6 +27,8 @@
         [ Fact ]
         public async Task Should_change_to_directory_when_exists()
         {
+            string randomDirectoryName = Guid.NewGuid().ToString();
+
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
                                                  Host = "localhost",
@@ -34,15 +37,23 @@
                                              } ) )
             {
                 await sut.LoginAsync();
-                await sut.SetClientName( nameof( Should_change_to_directory_when_exists ) );
-                await sut.ChangeWorkingDirectoryAsync( "test1" );
-                sut.WorkingDirectory.Should().Be( "/test1" );
+                await sut.CreateDirectoryAsync( randomDirectoryName );
+                await sut.ChangeWorkingDirectoryAsync( randomDirectoryName );
+                sut.WorkingDirectory.Should().Be( $"/{randomDirectoryName}" );
+
+                await sut.ChangeWorkingDirectoryAsync( "../" );
+                await sut.DeleteDirectoryAsync( randomDirectoryName );
             }
         }
 
         [ Fact ]
         public async Task Should_change_to_deep_directory_when_exists()
         {
+            string[] randomDirectoryNames =
+            {
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString()
+            };
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
                                                  Host = "localhost",
@@ -50,10 +61,18 @@
                                                  Password = "password"
                                              } ) )
             {
+                string joinedPath = string.Join( "/", randomDirectoryNames );
                 await sut.LoginAsync();
-                await sut.SetClientName( nameof( Should_change_to_deep_directory_when_exists ) );
-                await sut.ChangeWorkingDirectoryAsync( "test1/test1_1" );
-                sut.WorkingDirectory.Should().Be( "/test1/test1_1" );
+
+                await sut.CreateDirectoryAsync( joinedPath );
+                await sut.ChangeWorkingDirectoryAsync( joinedPath );
+                sut.WorkingDirectory.Should().Be( $"/{joinedPath}" );
+
+                foreach ( string directory in randomDirectoryNames.Reverse() )
+                {
+                    await sut.ChangeWorkingDirectoryAsync( "../" );
+                    await sut.DeleteDirectoryAsync( directory );
+                }
             }
         }
     }

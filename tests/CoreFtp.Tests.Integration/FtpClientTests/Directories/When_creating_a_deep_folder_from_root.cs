@@ -18,27 +18,26 @@
                                                  Password = "password"
                                              } ) )
             {
-                var guid = Guid.NewGuid();
+                var guid = Guid.NewGuid().ToString();
                 await sut.LoginAsync();
                 await sut.SetClientName( nameof( Should_create_directory_structure_recursively ) );
 
-                await sut.CreateDirectoryAsync( $"toplevel/{guid}/abc/123" );
+                await sut.CreateDirectoryAsync( $"{guid}/abc/123" );
 
                 ( await sut.ListDirectoriesAsync() ).ToList()
-                                                    .Any( x => x.Name == "toplevel" )
+                                                    .Any( x => x.Name == guid )
                                                     .Should().BeTrue();
 
-                await sut.ChangeWorkingDirectoryAsync( "toplevel" );
-
-                ( await sut.ListDirectoriesAsync() ).ToList()
-                                                    .Any( x => x.Name == guid.ToString() )
-                                                    .Should().BeTrue();
-
-                await sut.ChangeWorkingDirectoryAsync( guid.ToString() );
+                await sut.ChangeWorkingDirectoryAsync( guid );
 
                 ( await sut.ListDirectoriesAsync() ).ToList()
                                                     .Any( x => x.Name == "abc" )
                                                     .Should().BeTrue();
+                await sut.ChangeWorkingDirectoryAsync( "/" );
+
+                await sut.DeleteDirectoryAsync( $"/{guid}/abc/123" );
+                await sut.DeleteDirectoryAsync( $"/{guid}/abc" );
+                await sut.DeleteDirectoryAsync( guid );
             }
         }
     }

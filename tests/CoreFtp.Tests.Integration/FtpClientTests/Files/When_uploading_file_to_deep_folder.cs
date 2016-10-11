@@ -12,6 +12,13 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
         [ Fact ]
         public async Task Should_recurse_as_appropriate_to_create_file()
         {
+            string[] randomDirectoryNames =
+            {
+                Guid.NewGuid().ToString(),
+                Guid.NewGuid().ToString()
+            };
+            string joinedPath = string.Join( "/", randomDirectoryNames );
+
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
                                                  Host = "localhost",
@@ -22,18 +29,27 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 await sut.LoginAsync();
 
 
-                var newGuid = Guid.NewGuid();
-                using ( var writeStream = await sut.OpenFileWriteStreamAsync( $"folder1/folder2/{newGuid}.txt" ) )
+                string randomFile = $"{Guid.NewGuid()}.txt";
+                using ( var writeStream = await sut.OpenFileWriteStreamAsync( $"/{joinedPath}/{randomFile}" ) )
                 {
                     var fileReadStream = "abc123".ToByteStream();
                     await fileReadStream.CopyToAsync( writeStream );
                 }
 
-                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == "folder1" ).Should().BeTrue();
-                await sut.ChangeWorkingDirectoryAsync( "folder1" );
-                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == "folder2" ).Should().BeTrue();
-                await sut.ChangeWorkingDirectoryAsync( "folder2" );
-                ( await sut.ListFilesAsync() ).Any( x => x.Name == $"{newGuid}.txt" ).Should().BeTrue();
+                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryNames[ 0 ] ).Should().BeTrue();
+                await sut.ChangeWorkingDirectoryAsync( randomDirectoryNames[ 0 ] );
+                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryNames[ 1 ] ).Should().BeTrue();
+                await sut.ChangeWorkingDirectoryAsync( randomDirectoryNames[ 1 ] );
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFile ).Should().BeTrue();
+
+
+                await sut.DeleteFileAsync( randomFile );
+
+                foreach ( string directory in randomDirectoryNames.Reverse() )
+                {
+                    await sut.ChangeWorkingDirectoryAsync( "../" );
+                    await sut.DeleteDirectoryAsync( directory );
+                }
             }
         }
     }

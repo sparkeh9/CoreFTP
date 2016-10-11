@@ -32,7 +32,7 @@
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            Task.WaitAny( client.CloseFileWriteStreamAsync(), Task.Delay( 250 ) );
+            Task.WaitAny( client.CloseFileWriteStreamAsync(), Task.Delay( 5000 ) );
         }
 
         public override async Task FlushAsync( CancellationToken cancellationToken )

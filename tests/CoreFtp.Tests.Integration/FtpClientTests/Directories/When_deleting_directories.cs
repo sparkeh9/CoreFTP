@@ -28,6 +28,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
         [ Fact ]
         public async Task Should_delete_directory_when_exists()
         {
+            string randomDirectoryName = Guid.NewGuid().ToString();
+
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
                                                  Host = "localhost",
@@ -35,7 +37,6 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                                                  Password = "password"
                                              } ) )
             {
-                string randomDirectoryName = Guid.NewGuid().ToString();
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
                 ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeTrue();

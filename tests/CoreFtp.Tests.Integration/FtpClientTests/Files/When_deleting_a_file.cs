@@ -1,5 +1,6 @@
 namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 {
+    using System;
     using System.Linq;
     using System.Threading.Tasks;
     using FluentAssertions;
@@ -18,20 +19,21 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Password = "password"
                                              } ) )
             {
+                string randomFileName = $"{Guid.NewGuid()}.jpg";
                 await sut.LoginAsync();
                 var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );
 
-                using ( var writeStream = await sut.OpenFileWriteStreamAsync( "uploaded_penguin.jpg" ) )
+                using ( var writeStream = await sut.OpenFileWriteStreamAsync( randomFileName ) )
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
                 }
 
-                ( await sut.ListFilesAsync() ).Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeTrue();
 
-                await sut.DeleteFileAsync( "uploaded_penguin.jpg" );
+                await sut.DeleteFileAsync( randomFileName );
 
-                ( await sut.ListFilesAsync() ).Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeFalse();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeFalse();
             }
         }
     }

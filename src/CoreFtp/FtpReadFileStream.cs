@@ -33,7 +33,7 @@ namespace CoreFtp
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            Task.WaitAny( client.GetResponseAsync(), Task.Delay( 250 ) );
+            Task.WaitAny( client.GetResponseAsync(), Task.Delay( 5000 ) );
         }
 
         public override async Task FlushAsync( CancellationToken cancellationToken )

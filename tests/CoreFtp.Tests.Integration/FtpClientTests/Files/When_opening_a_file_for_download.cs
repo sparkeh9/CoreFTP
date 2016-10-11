@@ -11,6 +11,7 @@
         [ Fact ]
         public async Task Should_present_read_stream_and_deliver_file()
         {
+            string randomFileName = $"{Guid.NewGuid()}.jpg";
             var tempFile = ResourceHelpers.GetTempFileInfo();
             tempFile.Length.Should().Be( 0 );
 
@@ -22,13 +23,16 @@
                                              } ) )
             {
                 await sut.LoginAsync();
-                using ( var ftpReadStream = await sut.OpenFileReadStreamAsync( "test.png" ) )
+                await sut.CreateTestResourceWithNameAsync( "test.png", randomFileName );
+                using ( var ftpReadStream = await sut.OpenFileReadStreamAsync( randomFileName ) )
                 {
                     using ( var fileWriteStream = tempFile.OpenWrite() )
                     {
                         await ftpReadStream.CopyToAsync( fileWriteStream );
                     }
                 }
+
+                await sut.DeleteFileAsync( randomFileName );
             }
 
             tempFile.Exists.Should().BeTrue();

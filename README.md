@@ -63,16 +63,4 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
 
 ###Integration Tests ###
 
-Integration tests rely on an FTP server running on localhost with passive mode enabled, with the following folder structure in place
-(N.B. the image used is supplied in the integration tests resource folder)
-
-```
-.
-+-- test1
-|   +-- test1_1
-|		+-- test.png
-|   +-- test1_2
-|	+-- test.png
-+-- test2
-+-- test.png 
-```
+Integration tests rely on an FTP server running on localhost with passive mode enabled.

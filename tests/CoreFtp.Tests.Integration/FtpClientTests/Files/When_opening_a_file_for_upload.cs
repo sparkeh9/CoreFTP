@@ -1,5 +1,6 @@
 namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 {
+    using System;
     using System.Linq;
     using System.Threading.Tasks;
     using FluentAssertions;
@@ -18,11 +19,13 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Password = "password"
                                              } ) )
             {
+                string randomDirectoryName = $"{Guid.NewGuid()}";
+                string randomFileName = $"{Guid.NewGuid()}.jpg";
+
                 await sut.LoginAsync();
-                await sut.ChangeWorkingDirectoryAsync( "test2" );
                 var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );
 
-                using ( var writeStream = await sut.OpenFileWriteStreamAsync( "uploaded_penguin.jpg" ) )
+                using ( var writeStream = await sut.OpenFileWriteStreamAsync( randomFileName ) )
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
@@ -30,7 +33,9 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
                 var files = await sut.ListFilesAsync();
 
-                files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
+                files.Any( x => x.Name == randomFileName ).Should().BeTrue();
+
+                await sut.DeleteFileAsync( randomFileName );
             }
         }
 
@@ -44,20 +49,27 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Password = "password"
                                              } ) )
             {
+                string randomDirectoryName = $"{Guid.NewGuid()}";
+                string randomFileName = $"{Guid.NewGuid()}.jpg";
+
                 await sut.LoginAsync();
-                await sut.ChangeWorkingDirectoryAsync( "test1" );
+                await sut.CreateDirectoryAsync( randomDirectoryName );
                 var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );
 
-                using ( var writeStream = await sut.OpenFileWriteStreamAsync( "uploaded_penguin.jpg" ) )
+                using ( var writeStream = await sut.OpenFileWriteStreamAsync( $"/{randomDirectoryName}/{randomFileName}" ) )
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
                 }
 
+                await sut.ChangeWorkingDirectoryAsync( randomDirectoryName );
 
                 var files = await sut.ListFilesAsync();
+                files.Any( x => x.Name == randomFileName ).Should().BeTrue();
 
-                files.Any( x => x.Name == "uploaded_penguin.jpg" ).Should().BeTrue();
+                await sut.DeleteFileAsync( randomFileName );
+                await sut.ChangeWorkingDirectoryAsync( "../" );
+                await sut.DeleteDirectoryAsync( randomDirectoryName );
             }
         }
     }

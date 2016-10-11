@@ -207,8 +207,8 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
-            var segments = fileName.Split( '/' );
-            await CreateDirectoryStructureRecursively( segments.Take( segments.Length - 1 ).ToArray() );
+            var segments = fileName.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
+            await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray() );
             return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
         }
 
@@ -228,37 +228,47 @@
         /// </summary>
         /// <param name="directories"></param>
         /// <returns></returns>
-        private async Task CreateDirectoryStructureRecursively( IReadOnlyList<string> directories )
+        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories )
         {
             string originalPath = WorkingDirectory;
 
-            if ( directories.Count > 1 )
+            if ( !directories.Any() )
+                return;
+
+            if ( directories.Count == 1 )
             {
-                foreach ( string directory in directories )
-                {
-                    var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                           {
-                                                               FtpCommand = FtpCommand.CWD,
-                                                               Data = directory
-                                                           } );
-
-                    if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
-                        continue;
-
-                    await SendCommandAsync( new FtpCommandEnvelope
-                                            {
-                                                FtpCommand = FtpCommand.MKD,
-                                                Data = directory
-                                            } );
-                    await SendCommandAsync( new FtpCommandEnvelope
-                                            {
-                                                FtpCommand = FtpCommand.CWD,
-                                                Data = directory
-                                            } );
-                }
-
-                await ChangeWorkingDirectoryAsync( originalPath );
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.MKD,
+                                            Data = directories.First()
+                                        } );
+                return;
             }
+
+            foreach ( string directory in directories )
+            {
+                var response = await SendCommandAsync( new FtpCommandEnvelope
+                                                       {
+                                                           FtpCommand = FtpCommand.CWD,
+                                                           Data = directory
+                                                       } );
+
+                if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
+                    continue;
+
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.MKD,
+                                            Data = directory
+                                        } );
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.CWD,
+                                            Data = directory
+                                        } );
+            }
+
+            await ChangeWorkingDirectoryAsync( originalPath );
         }
 
         /// <summary>
@@ -280,6 +290,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
+            await SetTransferMode( FtpTransferMode.Binary );
             return await ListNodeTypeAsync( FtpNodeType.File );
         }
 
@@ -289,6 +300,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
+            await SetTransferMode( FtpTransferMode.Binary );
             return await ListNodeTypeAsync( FtpNodeType.Directory );
         }
 
@@ -429,13 +441,13 @@
             var usingMlsd = true;
             var result = await SendCommandAsync( FtpCommand.MLSD );
 
-            if (result.FtpStatusCode == FtpStatusCode.CommandSyntaxError || result.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
+            if ( result.FtpStatusCode == FtpStatusCode.CommandSyntaxError || result.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
             {
                 usingMlsd = false;
                 result = await SendCommandAsync( FtpCommand.NLST );
             }
 
-            if ( (result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && (result.FtpStatusCode != FtpStatusCode.OpeningData ) )
+            if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
                 throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
 
             var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
@@ -443,39 +455,39 @@
 
             var rawResult = new StringBuilder();
 
-                do
-                {
-                    var buffer = new byte[BUFFER_SIZE];
-
-                    int byteCount = dataSocket.Receive(buffer, buffer.Length, 0);
-                    if (byteCount == 0) break;
-
-                    rawResult.Append(Encoding.ASCII.GetString(buffer, 0, byteCount));
-
-                    hasTimedOut = (configuration.TimeoutSeconds == 0) || (DateTime.Now < maxTime);
-                } while (hasTimedOut);
-
-                dataSocket.Shutdown(SocketShutdown.Both);
-
-                await GetResponseAsync();
-
-            var lines = rawResult.Replace(CARRIAGE_RETURN, string.Empty).ToString().Split(LINEFEED);
-            if (usingMlsd)
+            do
             {
-                var nodes = (from node in lines
-                             where node.Contains($"type={nodeTypeString}")
-                             select node.ToFtpNode())
+                var buffer = new byte[BUFFER_SIZE];
+
+                int byteCount = dataSocket.Receive( buffer, buffer.Length, 0 );
+                if ( byteCount == 0 ) break;
+
+                rawResult.Append( Encoding.ASCII.GetString( buffer, 0, byteCount ) );
+
+                hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
+            } while ( hasTimedOut );
+
+            dataSocket.Shutdown( SocketShutdown.Both );
+
+            await GetResponseAsync();
+
+            var lines = rawResult.Replace( CARRIAGE_RETURN, string.Empty ).ToString().Split( LINEFEED );
+            if ( usingMlsd )
+            {
+                var nodes = ( from node in lines
+                              where node.Contains( $"type={nodeTypeString}" )
+                              select node.ToFtpNode() )
                     .ToList();
 
                 return nodes.AsReadOnly();
             }
             else
             {
-                var nodes = (from name in lines
-                            select new FtpNodeInformation
-                            {
-                                Name = name,
-                            })
+                var nodes = ( from name in lines
+                              select new FtpNodeInformation
+                              {
+                                  Name = name,
+                              } )
                     .ToList();
 
                 return nodes.AsReadOnly();
@@ -603,7 +615,7 @@
 
         public void Dispose()
         {
-            Task.WaitAny( LogOutAsync(), Task.Delay( 250 ) );
+            Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
             commandSocket?.Dispose();
             dataSocket?.Dispose();
         }

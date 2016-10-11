@@ -1,8 +1,10 @@
 ﻿namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 {
+    using System;
     using System.Linq;
     using System.Threading.Tasks;
     using FluentAssertions;
+    using Helpers;
     using Xunit;
 
     public class When_listing_files
@@ -17,10 +19,15 @@
                                                  Password = "password"
                                              } ) )
             {
+                string randomFileName = $"{Guid.NewGuid()}.jpg";
                 await sut.LoginAsync();
-                var files = await sut.ListFilesAsync();
+                await sut.CreateTestResourceWithNameAsync( "penguin.jpg", randomFileName );
 
-                files.Any( x => x.Name == "test.png" ).Should().BeTrue();
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeTrue();
+
+                await sut.DeleteFileAsync( randomFileName );
+
+                ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeFalse();
             }
         }
 
@@ -34,11 +41,20 @@
                                                  Password = "password"
                                              } ) )
             {
+                string randomDirectoryName = $"{Guid.NewGuid()}";
+                string randomFileName = $"{Guid.NewGuid()}.jpg";
+
                 await sut.LoginAsync();
-                await sut.ChangeWorkingDirectoryAsync( "test1" );
+                await sut.CreateDirectoryAsync( randomDirectoryName );
+                await sut.ChangeWorkingDirectoryAsync( randomDirectoryName );
+                await sut.CreateTestResourceWithNameAsync( "penguin.jpg", randomFileName );
                 var files = await sut.ListFilesAsync();
 
-                files.Any( x => x.Name == "test.png" ).Should().BeTrue();
+                files.Any( x => x.Name == randomFileName ).Should().BeTrue();
+
+                await sut.DeleteFileAsync( randomFileName );
+                await sut.ChangeWorkingDirectoryAsync( "../" );
+                await sut.DeleteDirectoryAsync( randomDirectoryName );
             }
         }
     }

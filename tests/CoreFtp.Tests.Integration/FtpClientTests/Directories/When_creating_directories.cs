@@ -1,6 +1,7 @@
 namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 {
     using System;
+    using System.Collections.ObjectModel;
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
@@ -11,6 +12,9 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
         [ Fact ]
         public async Task Should_create_a_directory()
         {
+            string randomDirectoryName = Guid.NewGuid().ToString();
+            ReadOnlyCollection<FtpNodeInformation> directories;
+
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
                                                  Host = "localhost",
@@ -18,15 +22,14 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                                                  Password = "password"
                                              } ) )
             {
-                string randomDirectoryName = Guid.NewGuid().ToString();
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
-                var directories = await sut.ListDirectoriesAsync();
+                directories = await sut.ListDirectoriesAsync();
                 await sut.DeleteDirectoryAsync( randomDirectoryName );
                 await sut.LogOutAsync();
-
-                directories.Any( x => x.Name == randomDirectoryName ).Should().BeTrue();
             }
+
+            directories.Any( x => x.Name == randomDirectoryName ).Should().BeTrue();
         }
     }
 }
