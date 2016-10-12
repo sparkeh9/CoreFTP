@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
     using FluentAssertions;
     using Helpers;
+    using Infrastructure;
     using Xunit;
 
     public class When_opening_a_file_for_download

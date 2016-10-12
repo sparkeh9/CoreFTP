@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using FluentAssertions;
+    using Infrastructure;
     using Xunit;
 
     public class When_changing_working_directories

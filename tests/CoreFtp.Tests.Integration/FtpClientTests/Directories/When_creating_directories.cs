@@ -6,6 +6,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
     using FluentAssertions;
     using Xunit;
     using System.Linq;
+    using Infrastructure;
 
     public class When_creating_directories
     {

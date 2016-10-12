@@ -1,11 +1,10 @@
-namespace CoreFtp
+﻿namespace CoreFtp.Infrastructure
 {
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Enum;
 
-    public class FtpReadFileStream : Stream
+    public class FtpWriteFileStream : Stream
     {
         private readonly Stream encapsulatedStream;
         private readonly FtpClient client;
@@ -22,7 +21,7 @@ namespace CoreFtp
         }
 
 
-        public FtpReadFileStream( Stream encapsulatedStream, FtpClient client )
+        public FtpWriteFileStream( Stream encapsulatedStream, FtpClient client )
         {
             this.encapsulatedStream = encapsulatedStream;
             this.client = client;
@@ -33,7 +32,7 @@ namespace CoreFtp
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            Task.WaitAny( client.GetResponseAsync(), Task.Delay( 5000 ) );
+            Task.WaitAny( client.CloseFileWriteStreamAsync(), Task.Delay( 5000 ) );
         }
 
         public override async Task FlushAsync( CancellationToken cancellationToken )

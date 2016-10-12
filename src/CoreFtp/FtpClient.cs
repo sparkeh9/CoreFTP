@@ -10,6 +10,7 @@
     using System.Threading.Tasks;
     using Enum;
     using Extensions;
+    using Infrastructure;
 
     public class FtpClient : IDisposable
     {

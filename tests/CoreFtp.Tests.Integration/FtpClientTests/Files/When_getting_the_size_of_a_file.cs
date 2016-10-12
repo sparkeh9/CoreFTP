@@ -4,6 +4,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using System.Threading.Tasks;
     using FluentAssertions;
     using Helpers;
+    using Infrastructure;
     using Xunit;
 
     public class When_getting_the_size_of_a_file

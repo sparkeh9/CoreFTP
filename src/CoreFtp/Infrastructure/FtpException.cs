@@ -1,4 +1,4 @@
-﻿namespace CoreFtp
+﻿namespace CoreFtp.Infrastructure
 {
     using System;
 

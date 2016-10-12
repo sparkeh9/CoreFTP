@@ -1,6 +1,5 @@
 ﻿namespace CoreFtp
 {
-    using System;
     using Enum;
 
     public class FtpClientConfiguration
