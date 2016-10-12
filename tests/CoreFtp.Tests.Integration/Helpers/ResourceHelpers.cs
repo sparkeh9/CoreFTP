@@ -7,11 +7,6 @@
 
     public static class ResourceHelpers
     {
-        private static string GetExecutableCurrentPath()
-        {
-            return AppContext.BaseDirectory;
-        }
-
         public static DirectoryInfo GetResourceDirectoryInfo( string directory = "" )
         {
             return new DirectoryInfo( $"{AppContext.BaseDirectory}/Resources/{directory}" );
