@@ -1,4 +1,4 @@
-﻿namespace CoreFtp.Extensions
+﻿namespace CoreFtp.Infrastructure.Extensions
 {
     using System.Text;
 

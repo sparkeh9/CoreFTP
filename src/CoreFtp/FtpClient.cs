@@ -8,24 +8,22 @@
     using System.Net.Sockets;
     using System.Text;
     using System.Threading.Tasks;
+    using Components.DirectoryListing;
     using Enum;
-    using Extensions;
     using Infrastructure;
+    using Infrastructure.Extensions;
 
     public class FtpClient : IDisposable
     {
-        private const string ANONYMOUS_USER = "anonymous";
-        private const char LINEFEED = '\n';
-        private const string CARRIAGE_RETURN = "\r";
+        private IDirectoryListProvider directoryListProvider;
 
-        private static readonly int BUFFER_SIZE = 512;
-        private Socket commandSocket { get; set; }
-        private Socket dataSocket { get; set; }
+        private readonly FtpClientConfiguration configuration;
+        internal IEnumerable<string> Features { get; set; }
+        internal Socket commandSocket { get; set; }
+        internal Socket dataSocket { get; set; }
         public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
         public bool IsAuthenticated { get; set; }
-
         public string WorkingDirectory { get; set; }
-        private readonly FtpClientConfiguration configuration;
 
         public FtpClient( FtpClientConfiguration configuration )
         {
@@ -44,7 +42,7 @@
             if ( IsConnected )
                 await LogOutAsync();
 
-            string username = configuration.Username.IsNullOrWhiteSpace() ? ANONYMOUS_USER : configuration.Username;
+            string username = configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : configuration.Username;
 
             await ConnectCommandSocketAsync();
             var usrResponse = await SendCommandAsync( new FtpCommandEnvelope
@@ -58,14 +56,22 @@
             var passResponse = await SendCommandAsync( new FtpCommandEnvelope
                                                        {
                                                            FtpCommand = FtpCommand.PASS,
-                                                           Data = username != ANONYMOUS_USER ? configuration.Password : string.Empty
+                                                           Data = username != Constants.ANONYMOUS_USER ? configuration.Password : string.Empty
                                                        } );
 
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
 
+            Features = await DetermineFeaturesAsync();
+
             await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
             await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
+
+
+            if ( this.UsesMlsd() )
+            {
+                directoryListProvider = new MlsdDirectoryListProvider( this, configuration );
+            }
         }
 
         /// <summary>
@@ -79,6 +85,21 @@
             await SendCommandAsync( FtpCommand.QUIT );
             commandSocket.Shutdown( SocketShutdown.Both );
             IsAuthenticated = false;
+        }
+
+        public async Task<IEnumerable<string>> DetermineFeaturesAsync()
+        {
+            EnsureLoggedIn();
+            var response = await SendCommandAsync( FtpCommand.FEAT );
+
+            if ( response.FtpStatusCode == FtpStatusCode.CommandSyntaxError || response.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
+                return Enumerable.Empty<string>();
+
+            var features = response.Data.Where( x => !x.StartsWith( ( (int) FtpStatusCode.SystemHelpReply ).ToString() ) && !x.IsNullOrWhiteSpace() )
+                                   .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
+                                   .ToList();
+
+            return features;
         }
 
         /// <summary>
@@ -291,8 +312,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            await SetTransferMode( FtpTransferMode.Binary );
-            return await ListNodeTypeAsync( FtpNodeType.File );
+            return await directoryListProvider.ListFilesAsync();
         }
 
         /// <summary>
@@ -301,8 +321,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            await SetTransferMode( FtpTransferMode.Binary );
-            return await ListNodeTypeAsync( FtpNodeType.Directory );
+            return await directoryListProvider.ListDirectoriesAsync();
         }
 
 
@@ -422,80 +441,6 @@
         }
 
         /// <summary>
-        /// Lists all nodes (files and directories) in the current working directory
-        /// </summary>
-        /// <param name="ftpNodeType"></param>
-        /// <returns></returns>
-        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType ftpNodeType )
-        {
-            string nodeTypeString = ftpNodeType == FtpNodeType.File
-                ? "file"
-                : "dir";
-
-            EnsureLoggedIn();
-
-            dataSocket = await ConnectDataSocketAsync();
-
-            if ( dataSocket == null )
-                throw new FtpException( "Could not establish a data connection" );
-
-            var usingMlsd = true;
-            var result = await SendCommandAsync( FtpCommand.MLSD );
-
-            if ( result.FtpStatusCode == FtpStatusCode.CommandSyntaxError || result.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
-            {
-                usingMlsd = false;
-                result = await SendCommandAsync( FtpCommand.NLST );
-            }
-
-            if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
-                throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
-
-            var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
-            bool hasTimedOut;
-
-            var rawResult = new StringBuilder();
-
-            do
-            {
-                var buffer = new byte[BUFFER_SIZE];
-
-                int byteCount = dataSocket.Receive( buffer, buffer.Length, 0 );
-                if ( byteCount == 0 ) break;
-
-                rawResult.Append( Encoding.ASCII.GetString( buffer, 0, byteCount ) );
-
-                hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
-            } while ( hasTimedOut );
-
-            dataSocket.Shutdown( SocketShutdown.Both );
-
-            await GetResponseAsync();
-
-            var lines = rawResult.Replace( CARRIAGE_RETURN, string.Empty ).ToString().Split( LINEFEED );
-            if ( usingMlsd )
-            {
-                var nodes = ( from node in lines
-                              where node.Contains( $"type={nodeTypeString}" )
-                              select node.ToFtpNode() )
-                    .ToList();
-
-                return nodes.AsReadOnly();
-            }
-            else
-            {
-                var nodes = ( from name in lines
-                              select new FtpNodeInformation
-                              {
-                                  Name = name,
-                              } )
-                    .ToList();
-
-                return nodes.AsReadOnly();
-            }
-        }
-
-        /// <summary>
         /// Checks if the command socket is open and that an authenticated session is active
         /// </summary>
         private void EnsureLoggedIn()
@@ -531,7 +476,7 @@
         /// Produces a data socket using Extended Passive mode
         /// </summary>
         /// <returns></returns>
-        private async Task<Socket> ConnectDataSocketAsync()
+        internal async Task<Socket> ConnectDataSocketAsync()
         {
             var epsvResult = await SendCommandAsync( FtpCommand.EPSV );
 
@@ -584,7 +529,7 @@
                                    {
                                        do
                                        {
-                                           var buffer = new byte[BUFFER_SIZE];
+                                           var buffer = new byte[Constants.BUFFER_SIZE];
                                            string statusMessage = string.Empty;
 
                                            while ( true )
@@ -596,7 +541,7 @@
                                                    break;
                                            }
 
-                                           var message = statusMessage.Split( LINEFEED );
+                                           var message = statusMessage.Split( Constants.LINEFEED );
 
                                            statusMessage = statusMessage.Length > 2
                                                ? message[ message.Length - 2 ]
@@ -608,7 +553,8 @@
                                            return new FtpResponse
                                            {
                                                ResponseMessage = statusMessage,
-                                               FtpStatusCode = statusMessage.ToStatusCode()
+                                               FtpStatusCode = statusMessage.ToStatusCode(),
+                                               Data = message
                                            };
                                        } while ( true );
                                    } );

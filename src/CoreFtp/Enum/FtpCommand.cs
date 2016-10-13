@@ -22,5 +22,6 @@
         RNTO,
         SIZE,
         TYPE,
+        FEAT
     }
 }

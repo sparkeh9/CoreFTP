@@ -9,6 +9,7 @@
         OpeningData = 150,
         CommandOK = 200,
         CommandExtraneous = 202,
+        SystemHelpReply = 211,
         DirectoryStatus = 212,
         FileStatus = 213,
         SystemType = 215,
@@ -39,6 +40,6 @@
         ActionNotTakenFileUnavailable = 550,
         ActionAbortedUnknownPageType = 551,
         FileActionAborted = 552,
-        ActionNotTakenFilenameNotAllowed = 553,
+        ActionNotTakenFilenameNotAllowed = 553
     }
 }

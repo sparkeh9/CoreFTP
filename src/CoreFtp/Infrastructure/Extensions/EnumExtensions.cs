@@ -1,10 +1,9 @@
-﻿namespace CoreFtp.Extensions
+﻿namespace CoreFtp.Infrastructure.Extensions
 {
     using System;
 #if NETSTANDARD
     using System.Reflection;
 #endif
-    using Enum;
 
     public static class EnumExtensions
     {

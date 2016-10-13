@@ -6,5 +6,6 @@
     {
         public FtpStatusCode FtpStatusCode { get; set; }
         public string ResponseMessage { get; set; }
+        public string[] Data { get; set; }
     }
 }
