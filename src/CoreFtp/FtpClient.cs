@@ -15,7 +15,7 @@
 
     public class FtpClient : IDisposable
     {
-        private IDirectoryListProvider directoryListProvider;
+        private IDirectoryProvider directoryProvider;
 
         private readonly FtpClientConfiguration configuration;
         internal IEnumerable<string> Features { get; set; }
@@ -67,12 +67,9 @@
             await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
             await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
 
-
-            if ( this.UsesMlsd() )
-            {
-                directoryListProvider = new MlsdDirectoryListProvider( this, configuration );
-            }
+            directoryProvider = DetermineDirectoryProvider();
         }
+
 
         /// <summary>
         ///     Attemps to log the user out asynchronously, sends the QUIT command and terminates the command socket.
@@ -85,21 +82,6 @@
             await SendCommandAsync( FtpCommand.QUIT );
             commandSocket.Shutdown( SocketShutdown.Both );
             IsAuthenticated = false;
-        }
-
-        public async Task<IEnumerable<string>> DetermineFeaturesAsync()
-        {
-            EnsureLoggedIn();
-            var response = await SendCommandAsync( FtpCommand.FEAT );
-
-            if ( response.FtpStatusCode == FtpStatusCode.CommandSyntaxError || response.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
-                return Enumerable.Empty<string>();
-
-            var features = response.Data.Where( x => !x.StartsWith( ( (int) FtpStatusCode.SystemHelpReply ).ToString() ) && !x.IsNullOrWhiteSpace() )
-                                   .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
-                                   .ToList();
-
-            return features;
         }
 
         /// <summary>
@@ -234,65 +216,6 @@
             return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this );
         }
 
-
-        /// <summary>
-        /// Creates a directory structure recursively given a path
-        /// </summary>
-        /// <param name="path"></param>
-        /// <returns></returns>
-        private async Task CreateDirectoryStructure( string path )
-        {
-            await CreateDirectoryStructureRecursively( path.Split( '/' ) );
-        }
-
-        /// <summary>
-        /// Creates a directory structure recursively given a path
-        /// </summary>
-        /// <param name="directories"></param>
-        /// <returns></returns>
-        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories )
-        {
-            string originalPath = WorkingDirectory;
-
-            if ( !directories.Any() )
-                return;
-
-            if ( directories.Count == 1 )
-            {
-                await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.MKD,
-                                            Data = directories.First()
-                                        } );
-                return;
-            }
-
-            foreach ( string directory in directories )
-            {
-                var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.CWD,
-                                                           Data = directory
-                                                       } );
-
-                if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
-                    continue;
-
-                await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.MKD,
-                                            Data = directory
-                                        } );
-                await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.CWD,
-                                            Data = directory
-                                        } );
-            }
-
-            await ChangeWorkingDirectoryAsync( originalPath );
-        }
-
         /// <summary>
         /// Closes the write stream and associated socket (if open), 
         /// </summary>
@@ -312,7 +235,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            return await directoryListProvider.ListFilesAsync();
+            return await directoryProvider.ListFilesAsync();
         }
 
         /// <summary>
@@ -321,7 +244,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            return await directoryListProvider.ListDirectoriesAsync();
+            return await directoryProvider.ListDirectoriesAsync();
         }
 
 
@@ -415,6 +338,120 @@
                                                FtpCommand = command
                                            } );
         }
+
+
+        /// <summary>
+        /// Retrieves the latest response from the FTP server on the command socket
+        /// </summary>
+        /// <returns></returns>
+        public async Task<FtpResponse> GetResponseAsync()
+        {
+            return await Task.Run( () =>
+                                   {
+                                       do
+                                       {
+                                           var buffer = new byte[Constants.BUFFER_SIZE];
+                                           string statusMessage = string.Empty;
+
+                                           while ( true )
+                                           {
+                                               int byteCount = commandSocket.Receive( buffer, buffer.Length, 0 );
+                                               statusMessage += Encoding.ASCII.GetString( buffer, 0, byteCount );
+
+                                               if ( byteCount < buffer.Length )
+                                                   break;
+                                           }
+
+                                           var message = statusMessage.Split( Constants.LINEFEED );
+
+                                           statusMessage = statusMessage.Length > 2
+                                               ? message[ message.Length - 2 ]
+                                               : message[ 0 ];
+
+                                           if ( !statusMessage.Substring( 3, 1 ).Equals( " " ) )
+                                               continue;
+
+                                           return new FtpResponse
+                                           {
+                                               ResponseMessage = statusMessage,
+                                               FtpStatusCode = statusMessage.ToStatusCode(),
+                                               Data = message
+                                           };
+                                       } while ( true );
+                                   } );
+        }
+
+        private IDirectoryProvider DetermineDirectoryProvider()
+        {
+            if ( this.UsesMlsd() )
+                return new MlsdDirectoryProvider( this, configuration );
+
+            return new ListDirectoryProvider( this, configuration );
+        }
+
+        private async Task<IEnumerable<string>> DetermineFeaturesAsync()
+        {
+            EnsureLoggedIn();
+            var response = await SendCommandAsync( FtpCommand.FEAT );
+
+            if ( response.FtpStatusCode == FtpStatusCode.CommandSyntaxError || response.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
+                return Enumerable.Empty<string>();
+
+            var features = response.Data.Where( x => !x.StartsWith( ( (int) FtpStatusCode.SystemHelpReply ).ToString() ) && !x.IsNullOrWhiteSpace() )
+                                   .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
+                                   .ToList();
+
+            return features;
+        }
+
+        /// <summary>
+        /// Creates a directory structure recursively given a path
+        /// </summary>
+        /// <param name="directories"></param>
+        /// <returns></returns>
+        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories )
+        {
+            string originalPath = WorkingDirectory;
+
+            if ( !directories.Any() )
+                return;
+
+            if ( directories.Count == 1 )
+            {
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.MKD,
+                                            Data = directories.First()
+                                        } );
+                return;
+            }
+
+            foreach ( string directory in directories )
+            {
+                var response = await SendCommandAsync( new FtpCommandEnvelope
+                                                       {
+                                                           FtpCommand = FtpCommand.CWD,
+                                                           Data = directory
+                                                       } );
+
+                if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
+                    continue;
+
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.MKD,
+                                            Data = directory
+                                        } );
+                await SendCommandAsync( new FtpCommandEnvelope
+                                        {
+                                            FtpCommand = FtpCommand.CWD,
+                                            Data = directory
+                                        } );
+            }
+
+            await ChangeWorkingDirectoryAsync( originalPath );
+        }
+
 
         /// <summary>
         /// Lists all directories in the current working directory
@@ -517,47 +554,6 @@
 
             await LogOutAsync();
             throw new FtpException( response.ResponseMessage );
-        }
-
-        /// <summary>
-        /// Retrieves the latest response from the FTP server on the command socket
-        /// </summary>
-        /// <returns></returns>
-        public async Task<FtpResponse> GetResponseAsync()
-        {
-            return await Task.Run( () =>
-                                   {
-                                       do
-                                       {
-                                           var buffer = new byte[Constants.BUFFER_SIZE];
-                                           string statusMessage = string.Empty;
-
-                                           while ( true )
-                                           {
-                                               int byteCount = commandSocket.Receive( buffer, buffer.Length, 0 );
-                                               statusMessage += Encoding.ASCII.GetString( buffer, 0, byteCount );
-
-                                               if ( byteCount < buffer.Length )
-                                                   break;
-                                           }
-
-                                           var message = statusMessage.Split( Constants.LINEFEED );
-
-                                           statusMessage = statusMessage.Length > 2
-                                               ? message[ message.Length - 2 ]
-                                               : message[ 0 ];
-
-                                           if ( !statusMessage.Substring( 3, 1 ).Equals( " " ) )
-                                               continue;
-
-                                           return new FtpResponse
-                                           {
-                                               ResponseMessage = statusMessage,
-                                               FtpStatusCode = statusMessage.ToStatusCode(),
-                                               Data = message
-                                           };
-                                       } while ( true );
-                                   } );
         }
 
         public void Dispose()

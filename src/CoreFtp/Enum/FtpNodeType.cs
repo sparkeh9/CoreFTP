@@ -3,6 +3,7 @@
     public enum FtpNodeType
     {
         File,
-        Directory
+        Directory,
+        SymbolicLink
     }
 }

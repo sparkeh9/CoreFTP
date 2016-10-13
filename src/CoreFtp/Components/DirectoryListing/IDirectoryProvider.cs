@@ -4,7 +4,7 @@
     using System.Threading.Tasks;
     using Infrastructure;
 
-    internal interface IDirectoryListProvider
+    internal interface IDirectoryProvider
     {
         Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync();
         Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync();
