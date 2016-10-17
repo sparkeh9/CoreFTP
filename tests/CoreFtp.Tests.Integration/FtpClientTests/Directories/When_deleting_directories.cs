@@ -9,14 +9,20 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 
     public class When_deleting_directories
     {
+        public When_deleting_directories()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_throw_exception_when_folder_nonexistent()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string randomDirectoryName = Guid.NewGuid().ToString();
@@ -33,9 +39,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -45,25 +52,5 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeFalse();
             }
         }
-
-//        [ Fact ]
-//        public async Task Should_delete_recursive_directory_when_exists()
-//        {
-//            using ( var sut = new FtpClient( new FtpClientConfiguration
-//                                             {
-//                                                 Host = "localhost",
-//                                                 Username = "user",
-//                                                 Password = "password"
-//                                             } ) )
-//            {
-//                string topLevelFolder = Guid.NewGuid().ToString();
-//                string randomDirectoryName = $"{topLevelFolder}/1/2/3/4/5/6/7/8/9";
-//                await sut.LoginAsync();
-//                await sut.CreateDirectoryAsync( randomDirectoryName );
-//                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == topLevelFolder ).Should().BeTrue();
-//                await sut.DeleteDirectoryAsync( topLevelFolder );
-//                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == topLevelFolder ).Should().BeFalse();
-//            }
-//        }
     }
 }

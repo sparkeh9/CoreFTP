@@ -9,6 +9,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
     public class When_uploading_file_to_deep_folder
     {
+        public When_uploading_file_to_deep_folder()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_recurse_as_appropriate_to_create_file()
         {
@@ -21,9 +26,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();

@@ -9,6 +9,11 @@
 
     public class When_opening_a_file_for_download
     {
+        public When_opening_a_file_for_download()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_present_read_stream_and_deliver_file()
         {
@@ -18,9 +23,10 @@
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -47,9 +53,10 @@
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();

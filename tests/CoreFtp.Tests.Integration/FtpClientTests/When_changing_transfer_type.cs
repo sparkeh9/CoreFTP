@@ -6,14 +6,20 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
     public class When_changing_transfer_type
     {
+        public When_changing_transfer_type()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_set_as_ascii_with_and_without_second_type()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -29,9 +35,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();

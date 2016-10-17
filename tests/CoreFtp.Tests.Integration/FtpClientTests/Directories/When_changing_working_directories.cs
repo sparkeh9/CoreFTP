@@ -9,14 +9,20 @@
 
     public class When_changing_working_directories
     {
+        public When_changing_working_directories()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_fail_when_changing_to_a_nonexistent_directory()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -32,9 +38,10 @@
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -57,9 +64,10 @@
             };
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string joinedPath = string.Join( "/", randomDirectoryNames );

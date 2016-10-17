@@ -6,12 +6,18 @@
 
     public class When_connecting_to_an_ftp_server
     {
+        public When_connecting_to_an_ftp_server()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_be_able_to_connect_and_disconnect_as_anonymous_user()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 sut.IsConnected.Should().BeFalse();
@@ -27,9 +33,10 @@
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 sut.IsConnected.Should().BeFalse();

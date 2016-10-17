@@ -12,12 +12,13 @@
     using Enum;
     using Infrastructure;
     using Infrastructure.Extensions;
+    using Microsoft.Extensions.Logging;
 
     public class FtpClient : IDisposable
     {
         private IDirectoryProvider directoryProvider;
-
         private readonly FtpClientConfiguration configuration;
+        public ILogger Logger { get; set; }
         internal IEnumerable<string> Features { get; set; }
         internal Socket commandSocket { get; set; }
         internal Socket dataSocket { get; set; }
@@ -42,7 +43,10 @@
             if ( IsConnected )
                 await LogOutAsync();
 
+
             string username = configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : configuration.Username;
+
+            Logger?.LogDebug( $"Logging In {username}" );
 
             await ConnectCommandSocketAsync();
             var usrResponse = await SendCommandAsync( new FtpCommandEnvelope
@@ -319,8 +323,9 @@
         {
             await Task.Run( () =>
                             {
-                                var commandInBytes = envelope.GetCommandString().ToAsciiBytes();
-                                commandSocket.Send( commandInBytes );
+                                string commandString = envelope.GetCommandString();
+                                Logger?.LogDebug( $"Sending command: {commandString}" );
+                                commandSocket.Send( commandString.ToAsciiBytes() );
                             } );
 
             return await GetResponseAsync();
@@ -370,6 +375,8 @@
 
                                            if ( !statusMessage.Substring( 3, 1 ).Equals( " " ) )
                                                continue;
+
+                                           Logger?.LogDebug( statusMessage );
 
                                            return new FtpResponse
                                            {
@@ -496,6 +503,7 @@
             {
                 await Task.Run( () =>
                                 {
+                                    Logger?.LogDebug( $"Connecting command socket, {configuration.Host}:{configuration.Port}" );
                                     commandSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
                                     commandSocket.Connect( configuration.Host, configuration.Port );
                                 } );
@@ -504,6 +512,7 @@
             }
             catch ( Exception ex )
             {
+                Logger?.LogDebug( "Connecting to command socket failed" );
                 await LogOutAsync();
                 throw new FtpException( "Unable to login to FTP server", ex );
             }
@@ -528,6 +537,7 @@
             Socket socket = null;
             try
             {
+                Logger?.LogDebug( $"Connecting data socket, {configuration.Host}:{passivePortNumber}" );
                 socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
                 socket.Connect( configuration.Host, passivePortNumber.Value );
 
@@ -545,12 +555,14 @@
         /// Throws an exception if the server response is not one of the given acceptable codes
         /// </summary>
         /// <param name="response"></param>
-        /// <param name="code"></param>
+        /// <param name="codes"></param>
         /// <returns></returns>
-        private async Task BailIfResponseNotAsync( FtpResponse response, params FtpStatusCode[] code )
+        private async Task BailIfResponseNotAsync( FtpResponse response, params FtpStatusCode[] codes )
         {
-            if ( code.Any( x => x == response.FtpStatusCode ) )
+            if ( codes.Any( x => x == response.FtpStatusCode ) )
                 return;
+
+            Logger?.LogDebug( $"Bailing due to response codes not being one of: [{string.Join( ",", codes )}]" );
 
             await LogOutAsync();
             throw new FtpException( response.ResponseMessage );
@@ -558,6 +570,7 @@
 
         public void Dispose()
         {
+            Logger?.LogDebug( "Disposing of resources" );
             Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
             commandSocket?.Dispose();
             dataSocket?.Dispose();

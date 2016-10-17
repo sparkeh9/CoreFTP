@@ -7,6 +7,11 @@
 
     public class When_providing_a_base_directory
     {
+        public When_providing_a_base_directory()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_be_in_base_directory_when_logging_in()
         {
@@ -14,9 +19,10 @@
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();
@@ -25,9 +31,10 @@
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password",
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port,
                                                  BaseDirectory = randomDirectoryName
                                              } ) )
             {

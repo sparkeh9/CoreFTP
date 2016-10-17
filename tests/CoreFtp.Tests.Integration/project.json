@@ -1,4 +1,4 @@
-﻿{
+{
     "version": "1.0.0-*",
     "dependencies": {
         "Microsoft.NETCore.App": {
@@ -10,7 +10,15 @@
         "FluentAssertions": "4.13.0",
         "xunit": "2.2.0-beta2-build3300",
         "dotnet-test-xunit": "2.2.0-preview2-build1029",
-        "CoreFtp": "1.0.8-*"
+        "CoreFtp": "1.0.8-*",
+        "Microsoft.Extensions.Configuration": "1.0.0",
+        "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
+        "Microsoft.Extensions.Configuration.Json": "1.0.0",
+        "Microsoft.Extensions.DependencyInjection": "1.0.0",
+        "Microsoft.Extensions.Options.ConfigurationExtensions": "1.0.0",
+        "Microsoft.Extensions.Logging": "1.0.0",
+        "Microsoft.Extensions.Logging.Console": "1.0.0",
+        "Microsoft.Extensions.Logging.Debug": "1.0.0"
     },
     "testRunner": "xunit",
     "frameworks": {
@@ -22,6 +30,7 @@
         "emitEntryPoint": true,
         "copyToOutput": {
             "include": [
+                "appsettings.json",
                 "Resources/*"
             ]
         }

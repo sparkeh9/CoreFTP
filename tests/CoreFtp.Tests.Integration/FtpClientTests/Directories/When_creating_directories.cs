@@ -10,6 +10,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 
     public class When_creating_directories
     {
+        public When_creating_directories()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_create_a_directory()
         {
@@ -18,9 +23,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 await sut.LoginAsync();

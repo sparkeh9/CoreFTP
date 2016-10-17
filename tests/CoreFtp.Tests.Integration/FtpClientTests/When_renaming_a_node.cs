@@ -9,14 +9,20 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
     public class When_renaming_a_node
     {
+        public When_renaming_a_node()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_rename_directory()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string oldRandomDirectoryName = Guid.NewGuid().ToString();
@@ -30,7 +36,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
                 await sut.RenameAsync( oldRandomDirectoryName, newRandomDirectoryName );
 
-                var directoriesAfterRename = ( await sut.ListDirectoriesAsync() );
+                var directoriesAfterRename = await sut.ListDirectoriesAsync();
                 directoriesAfterRename.Any( x => x.Name == oldRandomDirectoryName ).Should().BeFalse();
                 directoriesAfterRename.Any( x => x.Name == newRandomDirectoryName ).Should().BeTrue();
 
@@ -44,9 +50,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string originalRandomFileName = $"{Guid.NewGuid()}.jpg";

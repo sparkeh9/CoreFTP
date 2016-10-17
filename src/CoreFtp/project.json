@@ -7,11 +7,8 @@
         "projectUrl": "https://github.com/sparkeh9/CoreFTP",
         "tags": ["ftp", "core", "vnext"]
     },
-
     "authors": ["Nick Briscoe"],
     "description": "A simple .NET FTP library written entirely in C#, with no external dependencies",
-
-
     "frameworks": {
         "netstandard1.3": {
             "buildOptions": {
@@ -25,12 +22,14 @@
             }
         },
         "net452": {
-        
         }
     },
     "scripts": {
         "postcompile": [
             "dotnet pack --no-build --configuration %compile:Configuration%"
         ]
+    },
+    "dependencies": {
+        "Microsoft.Extensions.Logging.Abstractions": "1.0.0"
     }
 }

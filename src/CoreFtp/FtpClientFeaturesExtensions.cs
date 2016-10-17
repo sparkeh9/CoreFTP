@@ -6,7 +6,7 @@
     {
         public static bool UsesMlsd( this FtpClient operand )
         {
-            return operand.Features != null && operand.Features.Any( x => x == "MLSD" );
+            return ( operand.Features != null ) && operand.Features.Any( x => x == "MLSD" );
         }
     }
 }

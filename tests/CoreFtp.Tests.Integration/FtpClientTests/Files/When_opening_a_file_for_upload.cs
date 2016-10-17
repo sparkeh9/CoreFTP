@@ -9,14 +9,20 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
     public class When_uploading_a_file
     {
+        public When_uploading_a_file()
+        {
+            Program.Initialise();
+        }
+
         [ Fact ]
         public async Task Should_upload_file()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string randomDirectoryName = $"{Guid.NewGuid()}";
@@ -44,9 +50,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
-                                                 Host = "localhost",
-                                                 Username = "user",
-                                                 Password = "password"
+                                                 Host = Program.FtpConfiguration.Host,
+                                                 Username = Program.FtpConfiguration.Username,
+                                                 Password = Program.FtpConfiguration.Password,
+                                                 Port = Program.FtpConfiguration.Port
                                              } ) )
             {
                 string randomDirectoryName = $"{Guid.NewGuid()}";
