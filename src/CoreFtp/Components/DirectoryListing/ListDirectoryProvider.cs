@@ -121,11 +121,9 @@
                                  .ToString()
                                  .Split( Constants.LINEFEED );
 
-            if ( logger.IsEnabled( LogLevel.Debug ) )
-            {
+            if ( logger != null )
                 foreach ( string line in lines )
                     logger.LogDebug( line );
-            }
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 

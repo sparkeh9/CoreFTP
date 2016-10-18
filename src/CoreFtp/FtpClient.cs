@@ -411,13 +411,10 @@
                                    .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
                                    .ToList();
 
-            if ( Logger.IsEnabled( LogLevel.Debug ) )
-            {
-                foreach ( string feature in features )
-                {
-                    Logger.LogDebug( feature );
-                }
-            }
+
+            foreach ( string feature in features )
+                Logger?.LogDebug( feature );
+
 
             return features;
         }
