@@ -239,6 +239,7 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
+            EnsureLoggedIn();
             return await directoryProvider.ListFilesAsync();
         }
 
@@ -248,6 +249,8 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
+            EnsureLoggedIn();
+
             return await directoryProvider.ListDirectoriesAsync();
         }
 
@@ -321,6 +324,7 @@
         /// <returns></returns>
         public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
         {
+            EnsureLoggedIn();
             await Task.Run( () =>
                             {
                                 string commandString = envelope.GetCommandString();
@@ -393,7 +397,7 @@
             if ( this.UsesMlsd() )
                 return new MlsdDirectoryProvider( this, configuration );
 
-            return new ListDirectoryProvider( this, Logger, configuration);
+            return new ListDirectoryProvider( this, Logger, configuration );
         }
 
         private async Task<IEnumerable<string>> DetermineFeaturesAsync()
