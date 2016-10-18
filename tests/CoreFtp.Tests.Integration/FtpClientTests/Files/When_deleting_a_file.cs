@@ -7,12 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using Helpers;
     using Xunit;
 
-    public class When_deleting_a_file
+    public class When_deleting_a_file : TestBase
     {
-        public When_deleting_a_file()
-        {
-            Program.Initialise();
-        }
 
         [ Fact ]
         public async Task Should_delete_file()
@@ -25,6 +21,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomFileName = $"{Guid.NewGuid()}.jpg";
                 await sut.LoginAsync();
                 var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );

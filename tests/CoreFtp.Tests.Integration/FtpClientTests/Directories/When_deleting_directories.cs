@@ -7,13 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
     using Infrastructure;
     using Xunit;
 
-    public class When_deleting_directories
+    public class When_deleting_directories : TestBase
     {
-        public When_deleting_directories()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_throw_exception_when_folder_nonexistent()
         {
@@ -25,6 +20,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
+
                 string randomDirectoryName = Guid.NewGuid().ToString();
                 await sut.LoginAsync();
                 await Assert.ThrowsAsync<FtpException>( () => sut.DeleteDirectoryAsync( randomDirectoryName ) );
@@ -45,6 +42,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
+
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
                 ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeTrue();

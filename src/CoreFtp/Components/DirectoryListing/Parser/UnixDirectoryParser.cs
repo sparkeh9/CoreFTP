@@ -6,6 +6,7 @@
     using System.Text.RegularExpressions;
     using Enum;
     using Infrastructure;
+    using Microsoft.Extensions.Logging;
 
     public class UnixDirectoryParser : IListDirectoryParser
     {
@@ -16,6 +17,12 @@
                                                       @"(?<size>\d+)\s+" +
                                                       @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s" +
                                                       @"(?<name>.*)$", RegexOptions.Compiled );
+        private ILogger logger;
+
+        public UnixDirectoryParser(ILogger logger)
+        {
+            this.logger = logger;
+        }
 
         public bool Test( string testString )
         {

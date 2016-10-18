@@ -7,13 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using Infrastructure;
     using Xunit;
 
-    public class When_getting_the_size_of_a_file
+    public class When_getting_the_size_of_a_file : TestBase
     {
-        public When_getting_the_size_of_a_file()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_give_size()
         {
@@ -25,6 +20,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomFilename = $"{Guid.NewGuid()}.jpg";
                 await sut.LoginAsync();
 
@@ -38,7 +34,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
         }
 
         [ Fact ]
-        public async Task Shouldthrow_exception_when_file_nonexistent()
+        public async Task Should_throw_exception_when_file_nonexistent()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
                                              {
@@ -48,6 +44,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
 
                 await Assert.ThrowsAsync<FtpException>( () => sut.GetFileSizeAsync( $"{Guid.NewGuid()}.png" ) );

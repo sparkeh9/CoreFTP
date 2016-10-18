@@ -393,7 +393,7 @@
             if ( this.UsesMlsd() )
                 return new MlsdDirectoryProvider( this, configuration );
 
-            return new ListDirectoryProvider( this, configuration );
+            return new ListDirectoryProvider( this, Logger, configuration);
         }
 
         private async Task<IEnumerable<string>> DetermineFeaturesAsync()
@@ -407,6 +407,14 @@
             var features = response.Data.Where( x => !x.StartsWith( ( (int) FtpStatusCode.SystemHelpReply ).ToString() ) && !x.IsNullOrWhiteSpace() )
                                    .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
                                    .ToList();
+
+            if ( Logger.IsEnabled( LogLevel.Debug ) )
+            {
+                foreach ( string feature in features )
+                {
+                    Logger.LogDebug( feature );
+                }
+            }
 
             return features;
         }

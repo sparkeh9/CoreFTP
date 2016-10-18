@@ -5,9 +5,8 @@
     using FluentAssertions;
     using Xunit;
     using System.Linq;
-    using Helpers;
 
-    public class When_listing_directories
+    public class When_listing_directories : TestBase
     {
         [ Fact ]
         public async Task Should_list_directories_in_root()
@@ -20,6 +19,8 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
+
                 string randomDirectoryName = $"{Guid.NewGuid()}";
 
                 await sut.LoginAsync();
@@ -48,6 +49,8 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
+
                 string joinedPath = string.Join( "/", randomDirectoryNames );
                 await sut.LoginAsync();
 

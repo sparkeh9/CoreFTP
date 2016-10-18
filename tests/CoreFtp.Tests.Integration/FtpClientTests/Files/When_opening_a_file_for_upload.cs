@@ -7,13 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using Helpers;
     using Xunit;
 
-    public class When_uploading_a_file
+    public class When_uploading_a_file : TestBase
     {
-        public When_uploading_a_file()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_upload_file()
         {
@@ -25,6 +20,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomDirectoryName = $"{Guid.NewGuid()}";
                 string randomFileName = $"{Guid.NewGuid()}.jpg";
 
@@ -56,6 +52,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomDirectoryName = $"{Guid.NewGuid()}";
                 string randomFileName = $"{Guid.NewGuid()}.jpg";
 

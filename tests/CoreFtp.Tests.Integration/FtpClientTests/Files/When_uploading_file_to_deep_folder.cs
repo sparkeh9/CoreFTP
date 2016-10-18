@@ -7,13 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using Helpers;
     using Xunit;
 
-    public class When_uploading_file_to_deep_folder
+    public class When_uploading_file_to_deep_folder : TestBase
     {
-        public When_uploading_file_to_deep_folder()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_recurse_as_appropriate_to_create_file()
         {
@@ -32,8 +27,9 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
-                await sut.LoginAsync();
+                sut.Logger = Logger;
 
+                await sut.LoginAsync();
 
                 string randomFile = $"{Guid.NewGuid()}.txt";
                 using ( var writeStream = await sut.OpenFileWriteStreamAsync( $"/{joinedPath}/{randomFile}" ) )

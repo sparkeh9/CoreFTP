@@ -7,13 +7,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using Helpers;
     using Xunit;
 
-    public class When_renaming_a_node
+    public class When_renaming_a_node : TestBase
     {
-        public When_renaming_a_node()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_rename_directory()
         {
@@ -25,6 +20,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string oldRandomDirectoryName = Guid.NewGuid().ToString();
                 string newRandomDirectoryName = Guid.NewGuid().ToString();
 
@@ -56,6 +52,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string originalRandomFileName = $"{Guid.NewGuid()}.jpg";
                 string subsequentlyRenamedRandomFileName = $"{Guid.NewGuid()}.jpg";
 

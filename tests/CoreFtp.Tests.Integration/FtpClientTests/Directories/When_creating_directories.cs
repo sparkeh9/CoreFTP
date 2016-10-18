@@ -8,13 +8,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
     using System.Linq;
     using Infrastructure;
 
-    public class When_creating_directories
+    public class When_creating_directories : TestBase
     {
-        public When_creating_directories()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_create_a_directory()
         {
@@ -29,6 +24,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
                 directories = await sut.ListDirectoriesAsync();

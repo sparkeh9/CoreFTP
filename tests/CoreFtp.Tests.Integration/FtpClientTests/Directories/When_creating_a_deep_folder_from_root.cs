@@ -6,13 +6,8 @@
     using FluentAssertions;
     using Xunit;
 
-    public class When_creating_a_deep_folder_from_root
+    public class When_creating_a_deep_folder_from_root : TestBase
     {
-        public When_creating_a_deep_folder_from_root()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_create_directory_structure_recursively()
         {
@@ -24,7 +19,8 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
-                sut.Logger = Program.LoggerFactory.CreateLogger( "test" );
+                sut.Logger = Logger;
+
                 var guid = Guid.NewGuid().ToString();
                 await sut.LoginAsync();
                 await sut.SetClientName( nameof( Should_create_directory_structure_recursively ) );

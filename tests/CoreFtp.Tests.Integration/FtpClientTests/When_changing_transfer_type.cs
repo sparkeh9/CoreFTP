@@ -4,13 +4,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using Enum;
     using Xunit;
 
-    public class When_changing_transfer_type
+    public class When_changing_transfer_type : TestBase
     {
-        public When_changing_transfer_type()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_set_as_ascii_with_and_without_second_type()
         {
@@ -22,11 +17,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.SetTransferMode( FtpTransferMode.Ascii );
                 await sut.SetTransferMode( FtpTransferMode.Ascii, 'N' );
                 await sut.SetTransferMode( FtpTransferMode.Ascii, 'T' );
-                await sut.SetTransferMode( FtpTransferMode.Ascii, 'C' );
             }
         }
 
@@ -41,6 +36,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.SetTransferMode( FtpTransferMode.Binary );
             }

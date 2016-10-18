@@ -5,13 +5,8 @@
     using FluentAssertions;
     using Xunit;
 
-    public class When_providing_a_base_directory
+    public class When_providing_a_base_directory : TestBase
     {
-        public When_providing_a_base_directory()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_be_in_base_directory_when_logging_in()
         {
@@ -25,6 +20,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
             }
@@ -38,6 +34,7 @@
                                                  BaseDirectory = randomDirectoryName
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 sut.WorkingDirectory.Should().Be( $"/{randomDirectoryName}" );
                 await sut.DeleteDirectoryAsync( $"/{randomDirectoryName}" );

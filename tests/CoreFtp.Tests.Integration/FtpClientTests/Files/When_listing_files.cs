@@ -7,12 +7,8 @@
     using Helpers;
     using Xunit;
 
-    public class When_listing_files
+    public class When_listing_files : TestBase
     {
-        public When_listing_files()
-        {
-            Program.Initialise();
-        }
 
         [ Fact ]
         public async Task Should_list_files_in_root()
@@ -25,6 +21,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomFileName = $"{Guid.NewGuid()}.jpg";
                 await sut.LoginAsync();
                 await sut.CreateTestResourceWithNameAsync( "penguin.jpg", randomFileName );
@@ -48,6 +45,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string randomDirectoryName = $"{Guid.NewGuid()}";
                 string randomFileName = $"{Guid.NewGuid()}.jpg";
 

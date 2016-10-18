@@ -7,13 +7,8 @@
     using Infrastructure;
     using Xunit;
 
-    public class When_opening_a_file_for_download
+    public class When_opening_a_file_for_download : TestBase
     {
-        public When_opening_a_file_for_download()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_present_read_stream_and_deliver_file()
         {
@@ -29,6 +24,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.CreateTestResourceWithNameAsync( "test.png", randomFileName );
                 using ( var ftpReadStream = await sut.OpenFileReadStreamAsync( randomFileName ) )
@@ -59,6 +55,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await Assert.ThrowsAsync<FtpException>( () => sut.OpenFileReadStreamAsync( $"DOES_NOT_EXIST_{Guid.NewGuid()}.png" ) );
             }

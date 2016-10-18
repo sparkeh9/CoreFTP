@@ -9,22 +9,26 @@
     using Enum;
     using Infrastructure;
     using System.Linq;
+    using Microsoft.Extensions.Logging;
     using Parser;
 
     internal class ListDirectoryProvider : IDirectoryProvider
     {
         private readonly FtpClient ftpClient;
+        private readonly ILogger logger;
         private readonly FtpClientConfiguration configuration;
         private readonly List<IListDirectoryParser> directoryParsers;
 
-        public ListDirectoryProvider( FtpClient ftpClient, FtpClientConfiguration configuration )
+        public ListDirectoryProvider( FtpClient ftpClient, ILogger logger, FtpClientConfiguration configuration )
         {
             this.ftpClient = ftpClient;
+            this.logger = logger;
             this.configuration = configuration;
 
             directoryParsers = new List<IListDirectoryParser>
             {
-                new UnixDirectoryParser()
+                new UnixDirectoryParser( logger ),
+                new DosDirectoryParser( logger ),
             };
         }
 
@@ -87,7 +91,10 @@
 
             foreach ( string line in lines )
             {
-                yield return parser.Parse( line );
+                var parsed = parser.Parse( line );
+
+                if ( parsed != null )
+                    yield return parsed;
             }
         }
 
@@ -113,6 +120,12 @@
             var lines = rawResult.Replace( Constants.CARRIAGE_RETURN, string.Empty )
                                  .ToString()
                                  .Split( Constants.LINEFEED );
+
+            if ( logger.IsEnabled( LogLevel.Debug ) )
+            {
+                foreach ( string line in lines )
+                    logger.LogDebug( line );
+            }
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 

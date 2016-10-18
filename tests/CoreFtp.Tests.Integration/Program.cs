@@ -20,7 +20,7 @@
         {
             LoggerFactory = new LoggerFactory()
                 .AddConsole()
-                .AddDebug();
+                .AddDebug( LogLevel.Debug );
 
             var builder = new ConfigurationBuilder()
                 .SetBasePath( AppContext.BaseDirectory )

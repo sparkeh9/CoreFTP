@@ -7,13 +7,8 @@
     using Infrastructure;
     using Xunit;
 
-    public class When_changing_working_directories
+    public class When_changing_working_directories : TestBase
     {
-        public When_changing_working_directories()
-        {
-            Program.Initialise();
-        }
-
         [ Fact ]
         public async Task Should_fail_when_changing_to_a_nonexistent_directory()
         {
@@ -25,6 +20,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.SetClientName( nameof( Should_fail_when_changing_to_a_nonexistent_directory ) );
                 await Assert.ThrowsAsync<FtpException>( () => sut.ChangeWorkingDirectoryAsync( Guid.NewGuid().ToString() ) );
@@ -44,6 +40,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 await sut.LoginAsync();
                 await sut.CreateDirectoryAsync( randomDirectoryName );
                 await sut.ChangeWorkingDirectoryAsync( randomDirectoryName );
@@ -70,6 +67,7 @@
                                                  Port = Program.FtpConfiguration.Port
                                              } ) )
             {
+                sut.Logger = Logger;
                 string joinedPath = string.Join( "/", randomDirectoryNames );
                 await sut.LoginAsync();
 

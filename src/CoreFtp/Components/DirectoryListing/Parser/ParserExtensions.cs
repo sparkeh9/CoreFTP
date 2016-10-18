@@ -3,7 +3,7 @@
     using System;
     using System.Globalization;
 
-    public static class ParsesExtensions
+    public static class ParserExtensions
     {
         public static DateTime ExtractFtpDate( this string date, DateTimeStyles style )
         {
