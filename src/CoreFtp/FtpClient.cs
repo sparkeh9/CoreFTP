@@ -324,7 +324,6 @@
         /// <returns></returns>
         public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
         {
-            EnsureLoggedIn();
             await Task.Run( () =>
                             {
                                 string commandString = envelope.GetCommandString();

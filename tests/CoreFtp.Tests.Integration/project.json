@@ -10,7 +10,7 @@
         "FluentAssertions": "4.13.0",
         "xunit": "2.2.0-beta2-build3300",
         "dotnet-test-xunit": "2.2.0-preview2-build1029",
-        "CoreFtp": "1.0.10-*",
+        "CoreFtp": "1.1.0-*",
         "Microsoft.Extensions.Configuration": "1.0.0",
         "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
         "Microsoft.Extensions.Configuration.Json": "1.0.0",
