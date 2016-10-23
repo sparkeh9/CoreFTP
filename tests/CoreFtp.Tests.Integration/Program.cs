@@ -26,7 +26,7 @@
                 .SetBasePath( AppContext.BaseDirectory )
                 .AddJsonFile( "appsettings.json", true, true );
 
-            var configuration = builder.Build();
+            IConfigurationRoot configuration = builder.Build();
 
             var services = new ServiceCollection();
             services.Configure<FtpConfiguration>( configuration.GetSection( "FtpCredentials" ) );

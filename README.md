@@ -62,5 +62,4 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
 ```
 
 ###Integration Tests ###
-
-Integration tests rely on an FTP server running on localhost with passive mode enabled.
+Integration tests can be run against most FTP servers with passive mode enabled, credentials can be configured in appsettings.json of CoreFtp.Tests.Integration.

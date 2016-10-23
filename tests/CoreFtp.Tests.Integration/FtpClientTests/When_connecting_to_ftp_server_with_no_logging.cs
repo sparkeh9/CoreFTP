@@ -11,11 +11,13 @@
         {
             var ftpClient = new FtpClient( new FtpClientConfiguration
                                            {
-                                               Host = "localhost",
-                                               Port = 21,
-                                               Username = "user",
-                                               Password = "password"
+                                               Host = Program.FtpConfiguration.Host,
+                                               Port = Program.FtpConfiguration.Port,
+                                               Username = Program.FtpConfiguration.Username,
+                                               Password = Program.FtpConfiguration.Password
                                            } );
+
+            await ftpClient.LoginAsync();
 
             var directories = await ftpClient.ListDirectoriesAsync();
             var files = await ftpClient.ListFilesAsync();
