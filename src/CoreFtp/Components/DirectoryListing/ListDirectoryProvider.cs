@@ -123,7 +123,7 @@
 
             if ( logger != null )
                 foreach ( string line in lines )
-                    logger.LogDebug( line );
+                    logger?.LogDebug( line );
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 
