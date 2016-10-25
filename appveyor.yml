@@ -17,4 +17,4 @@ build:
   verbosity: minimal
 test: off
 artifacts:
-- path: src\CoreFtp\bin\Debug\CoreFtp.*.nupkg
+- path: src\CoreFtp\bin\Release\CoreFtp.*.nupkg
