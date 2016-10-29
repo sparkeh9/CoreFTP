@@ -127,7 +127,8 @@
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 
-            await ftpClient.GetResponseAsync();
+//            if (ftpClient.HasResponsePending())
+                await ftpClient.GetResponseAsync();
             return lines;
         }
     }

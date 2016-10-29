@@ -2,6 +2,7 @@
 {
     public enum FtpCommand
     {
+        NOOP,
         USER,
         PASS,
         QUIT,

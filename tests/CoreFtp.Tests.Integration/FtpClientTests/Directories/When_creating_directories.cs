@@ -7,9 +7,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
     using Xunit;
     using System.Linq;
     using Infrastructure;
+    using Xunit.Abstractions;
 
     public class When_creating_directories : TestBase
     {
+        public When_creating_directories( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_create_a_directory()
         {

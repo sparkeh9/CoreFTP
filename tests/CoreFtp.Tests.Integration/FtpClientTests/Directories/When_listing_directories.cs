@@ -5,9 +5,12 @@
     using FluentAssertions;
     using Xunit;
     using System.Linq;
+    using Xunit.Abstractions;
 
     public class When_listing_directories : TestBase
     {
+        public When_listing_directories( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_list_directories_in_root()
         {

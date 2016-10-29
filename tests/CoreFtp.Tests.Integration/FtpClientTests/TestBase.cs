@@ -1,14 +1,15 @@
 ﻿namespace CoreFtp.Tests.Integration.FtpClientTests
 {
     using Microsoft.Extensions.Logging;
+    using Xunit.Abstractions;
 
     public abstract class TestBase
     {
         protected ILogger Logger { get; set; }
 
-        protected TestBase()
+        protected TestBase( ITestOutputHelper outputHelper = null )
         {
-            Program.Initialise();
+            Program.Initialise( outputHelper );
             Logger = Program.LoggerFactory.CreateLogger( GetType().Name );
         }
     }

@@ -6,9 +6,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using FluentAssertions;
     using Helpers;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_uploading_a_file : TestBase
     {
+        public When_uploading_a_file( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_upload_file()
         {

@@ -6,9 +6,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using Helpers;
     using Infrastructure;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_getting_the_size_of_a_file : TestBase
     {
+        public When_getting_the_size_of_a_file( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_give_size()
         {

@@ -6,9 +6,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using FluentAssertions;
     using Helpers;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_uploading_file_to_deep_folder : TestBase
     {
+        public When_uploading_file_to_deep_folder(ITestOutputHelper outputHelper) : base(outputHelper) { }
+
         [ Fact ]
         public async Task Should_recurse_as_appropriate_to_create_file()
         {

@@ -26,7 +26,7 @@
             if ( !ftpClient.IsConnected || !ftpClient.IsAuthenticated )
                 throw new FtpException( "User must be logged in" );
         }
-        
+
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
             return await ListNodeTypeAsync( FtpNodeType.File );
@@ -56,7 +56,7 @@
                 throw new FtpException( "Could not establish a data connection" );
 
             var result = await ftpClient.SendCommandAsync( FtpCommand.MLSD );
-            if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
+            if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) && ( result.FtpStatusCode != FtpStatusCode.ClosingData ) )
                 throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
 
             var directoryListing = await RetrieveDirectoryListingAsync();
@@ -95,7 +95,8 @@
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 
-            await ftpClient.GetResponseAsync();
+            if ( ftpClient.HasResponsePending() )
+                await ftpClient.GetResponseAsync();
             return lines;
         }
     }

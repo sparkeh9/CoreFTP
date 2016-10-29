@@ -6,9 +6,11 @@
     using FluentAssertions;
     using Helpers;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_listing_files : TestBase
     {
+        public When_listing_files( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
         [ Fact ]
         public async Task Should_list_files_in_root()

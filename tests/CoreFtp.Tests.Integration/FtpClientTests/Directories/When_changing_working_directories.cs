@@ -6,9 +6,12 @@
     using FluentAssertions;
     using Infrastructure;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_changing_working_directories : TestBase
     {
+        public When_changing_working_directories( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_fail_when_changing_to_a_nonexistent_directory()
         {

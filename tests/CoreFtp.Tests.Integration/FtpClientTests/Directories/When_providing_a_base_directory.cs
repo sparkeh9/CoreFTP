@@ -4,9 +4,12 @@
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_providing_a_base_directory : TestBase
     {
+        public When_providing_a_base_directory( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_be_in_base_directory_when_logging_in()
         {

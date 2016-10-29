@@ -3,9 +3,12 @@
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_connecting_to_an_ftp_server : TestBase
     {
+        public When_connecting_to_an_ftp_server( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_be_able_to_connect_and_disconnect_as_anonymous_user()
         {

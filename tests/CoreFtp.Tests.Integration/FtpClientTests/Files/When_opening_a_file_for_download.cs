@@ -6,9 +6,12 @@
     using Helpers;
     using Infrastructure;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_opening_a_file_for_download : TestBase
     {
+        public When_opening_a_file_for_download( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_present_read_stream_and_deliver_file()
         {

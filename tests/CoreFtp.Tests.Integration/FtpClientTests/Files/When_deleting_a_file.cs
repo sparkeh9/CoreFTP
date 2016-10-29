@@ -6,9 +6,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using FluentAssertions;
     using Helpers;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_deleting_a_file : TestBase
     {
+        public When_deleting_a_file( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
         [ Fact ]
         public async Task Should_delete_file()

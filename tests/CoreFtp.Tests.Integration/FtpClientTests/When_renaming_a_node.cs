@@ -6,9 +6,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using FluentAssertions;
     using Helpers;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_renaming_a_node : TestBase
     {
+        public When_renaming_a_node( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_rename_directory()
         {

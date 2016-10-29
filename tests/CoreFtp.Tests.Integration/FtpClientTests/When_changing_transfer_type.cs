@@ -3,9 +3,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using System.Threading.Tasks;
     using Enum;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_changing_transfer_type : TestBase
     {
+        public When_changing_transfer_type( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+        
         [ Fact ]
         public async Task Should_set_as_ascii_with_and_without_second_type()
         {

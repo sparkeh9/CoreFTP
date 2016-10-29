@@ -182,14 +182,57 @@
 
             EnsureLoggedIn();
 
+            await SendCommandAsync( new FtpCommandEnvelope
+                                    {
+                                        FtpCommand = FtpCommand.NOOP,
+                                        Data = "DeleteDirectoryAsync"
+                                    } );
             var rmdResponse = await SendCommandAsync( new FtpCommandEnvelope
                                                       {
                                                           FtpCommand = FtpCommand.RMD,
                                                           Data = directory
                                                       } );
+            switch ( rmdResponse.FtpStatusCode )
+            {
+                case FtpStatusCode.CommandOK:
+                case FtpStatusCode.FileActionOK:
+                    return;
 
-            if ( rmdResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
-                throw new FtpException( rmdResponse.ResponseMessage );
+                case FtpStatusCode.ActionNotTakenFileUnavailable:
+                    await DeleteDirectoryRecursive( directory );
+                    return;
+
+                default:
+                    throw new FtpException( rmdResponse.ResponseMessage );
+            }
+        }
+
+        /// <summary>
+        /// Deletes the given directory from the FTP server
+        /// </summary>
+        /// <param name="directory"></param>
+        /// <returns></returns>
+        private async Task DeleteDirectoryRecursive( string directory )
+        {
+            await SendCommandAsync( new FtpCommandEnvelope
+                                    {
+                                        FtpCommand = FtpCommand.NOOP,
+                                        Data = $"DeleteDirectoryRecursive {directory}"
+                                    } );
+            await ChangeWorkingDirectoryAsync( directory );
+
+            foreach ( var file in await ListFilesAsync() )
+            {
+                await DeleteFileAsync( file.Name );
+            }
+
+            foreach ( var dir in await ListDirectoriesAsync() )
+            {
+                await DeleteDirectoryRecursive( dir.Name );
+            }
+
+            await ChangeWorkingDirectoryAsync( ".." );
+            await DeleteDirectoryAsync( directory );
         }
 
         /// <summary>
@@ -247,6 +290,7 @@
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
 
             dataSocket.Shutdown( SocketShutdown.Both );
+
             await GetResponseAsync();
         }
 
@@ -344,6 +388,9 @@
         /// <returns></returns>
         public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
         {
+            if ( HasResponsePending() )
+                await GetResponseAsync();
+
             string commandString = envelope.GetCommandString();
             Logger?.LogDebug( $"[FtpClient] Sending command: {commandString}" );
             commandSocket.Send( commandString.ToAsciiBytes() );
@@ -563,7 +610,13 @@
         /// <returns></returns>
         internal async Task<Socket> ConnectDataSocketAsync()
         {
-            Logger?.LogDebug( $"[FtpClient] Connecting to a data socket" );
+//            if ( HasResponsePending() )
+//            {
+//                var response = await GetResponseAsync();
+//                throw new Exception( "unexpected pending data " + response );
+//            }
+
+            Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
             var epsvResult = await SendCommandAsync( FtpCommand.EPSV );
 
             if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
@@ -585,7 +638,7 @@
             }
             catch ( Exception ex )
             {
-                if ( ( socket != null ) && socket.Connected )
+                if ( socket != null && socket.Connected )
                     socket.Shutdown( SocketShutdown.Both );
                 throw new FtpException( "Can't connect to remote server", ex );
             }

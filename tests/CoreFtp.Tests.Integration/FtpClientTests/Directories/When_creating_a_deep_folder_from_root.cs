@@ -5,9 +5,12 @@
     using System.Threading.Tasks;
     using FluentAssertions;
     using Xunit;
+    using Xunit.Abstractions;
 
     public class When_creating_a_deep_folder_from_root : TestBase
     {
+        public When_creating_a_deep_folder_from_root( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
+
         [ Fact ]
         public async Task Should_create_directory_structure_recursively()
         {

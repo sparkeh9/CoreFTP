@@ -17,8 +17,9 @@
         "Microsoft.Extensions.Logging": "1.0.0",
         "Microsoft.Extensions.Logging.Console": "1.0.0",
         "Microsoft.Extensions.Logging.Debug": "1.0.0",
-        "FluentAssertions": "4.15.0",
-        "xunit": "2.2.0-beta3-build3402"
+        "xunit": "2.2.0-beta3-build3402",
+        "AsyncFriendlyStackTrace": "1.4.1",
+        "FluentAssertions": "4.16.0"
     },
     "testRunner": "xunit",
     "frameworks": {
