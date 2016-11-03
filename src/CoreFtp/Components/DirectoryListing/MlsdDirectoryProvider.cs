@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp.Components.DirectoryListing
 {
     using System;
+    using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.Net.Sockets;
     using System.Text;
@@ -9,22 +10,31 @@
     using Infrastructure;
     using System.Linq;
     using Infrastructure.Extensions;
+    using Microsoft.Extensions.Logging;
 
     internal class MlsdDirectoryProvider : IDirectoryProvider
     {
         private readonly FtpClient ftpClient;
         private readonly FtpClientConfiguration configuration;
+        private readonly ILogger logger;
+        private Socket socket;
 
-        public MlsdDirectoryProvider( FtpClient ftpClient, FtpClientConfiguration configuration )
+        public MlsdDirectoryProvider( FtpClient ftpClient, ILogger logger, FtpClientConfiguration configuration )
         {
             this.ftpClient = ftpClient;
             this.configuration = configuration;
+            this.logger = logger;
         }
 
         private void EnsureLoggedIn()
         {
             if ( !ftpClient.IsConnected || !ftpClient.IsAuthenticated )
                 throw new FtpException( "User must be logged in" );
+        }
+
+        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
+        {
+            return await ListNodeTypeAsync();
         }
 
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
@@ -42,17 +52,21 @@
         /// </summary>
         /// <param name="ftpNodeType"></param>
         /// <returns></returns>
-        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType ftpNodeType )
+        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType? ftpNodeType = null )
         {
-            string nodeTypeString = ftpNodeType == FtpNodeType.File
-                ? "file"
-                : "dir";
+            string nodeTypeString = !ftpNodeType.HasValue
+                ? "all"
+                : ftpNodeType.Value == FtpNodeType.File
+                    ? "file"
+                    : "dir";
+
+            logger?.LogDebug( $"[MlsdDirectoryProvider] Listing {ftpNodeType}" );
 
             EnsureLoggedIn();
 
-            ftpClient.dataSocket = await ftpClient.ConnectDataSocketAsync();
+            socket = await ftpClient.ConnectDataSocketAsync();
 
-            if ( ftpClient.dataSocket == null )
+            if ( socket == null )
                 throw new FtpException( "Could not establish a data connection" );
 
             var result = await ftpClient.SendCommandAsync( FtpCommand.MLSD );
@@ -62,7 +76,8 @@
             var directoryListing = await RetrieveDirectoryListingAsync();
 
             var nodes = ( from node in directoryListing
-                          where node.Contains( $"type={nodeTypeString}" )
+                          where !node.IsNullOrWhiteSpace()
+                          where !ftpNodeType.HasValue || node.Contains( $"type={nodeTypeString}" )
                           select node.ToFtpNode() )
                 .ToList();
 
@@ -81,7 +96,7 @@
             {
                 var buffer = new byte[Constants.BUFFER_SIZE];
 
-                int byteCount = ftpClient.dataSocket.Receive( buffer, buffer.Length, 0 );
+                int byteCount = socket.Receive( buffer, buffer.Length, 0 );
                 if ( byteCount == 0 ) break;
 
                 rawResult.Append( Encoding.ASCII.GetString( buffer, 0, byteCount ) );
@@ -93,10 +108,10 @@
                                  .ToString()
                                  .Split( Constants.LINEFEED );
 
-            ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
+            socket.Shutdown( SocketShutdown.Both );
 
-            if ( ftpClient.HasResponsePending() )
-                await ftpClient.GetResponseAsync();
+//            if ( ftpClient.HasResponsePending() )
+//                await ftpClient.GetResponseAsync();
             return lines;
         }
     }

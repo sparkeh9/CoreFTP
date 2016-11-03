@@ -88,7 +88,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 }
                 catch ( Exception e )
                 {
-                    Debugger.Break();
+//                    throw;
                     throw new Exception( e.ToAsyncString() );
                 }
                 //                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeFalse();

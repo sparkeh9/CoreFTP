@@ -6,6 +6,7 @@
 
     internal interface IDirectoryProvider
     {
+        Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync();
         Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync();
         Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync();
     }

@@ -2,6 +2,7 @@
 {
     using System.Linq;
     using System.Text.RegularExpressions;
+    using Enum;
     using Infrastructure;
 
     public static class StringExtensions
@@ -28,15 +29,33 @@
             return int.Parse( match.Groups[ "PortNumber" ].Value );
         }
 
+        public static FtpNodeType ToNodeType( this string operand )
+        {
+            switch ( operand )
+            {
+                case "dir":
+                    return FtpNodeType.Directory;
+                case "file":
+                    return FtpNodeType.File;
+            }
+
+            return FtpNodeType.SymbolicLink;
+        }
 
         public static FtpNodeInformation ToFtpNode( this string operand )
         {
             var dictionary = operand.Split( ';' )
                                     .Select( s => s.Split( '=' ) )
-                                    .ToDictionary( strings => strings.Length == 2 ? strings[ 0 ] : "name", strings => strings.Length == 2 ? strings[ 1 ] : strings[ 0 ] );
+                                    .ToDictionary( strings => strings.Length == 2
+                                                       ? strings[ 0 ]
+                                                       : "name",
+                                                   strings => strings.Length == 2
+                                                       ? strings[ 1 ]
+                                                       : strings[ 0 ] );
 
             return new FtpNodeInformation
             {
+                NodeType = dictionary.GetValueOrDefault( "type" ).Trim().ToNodeType(),
                 Name = dictionary.GetValueOrDefault( "name" ).Trim(),
                 Size = dictionary.GetValueOrDefault( "size" ).ParseOrDefault(),
                 DateModified = dictionary.GetValueOrDefault( "modify" ).ParseExactOrDefault( "yyyyMMddHHmmss" )

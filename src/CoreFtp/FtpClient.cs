@@ -6,7 +6,6 @@
     using System.IO;
     using System.Linq;
     using System.Net.Sockets;
-    using System.Security.Cryptography;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -199,7 +198,7 @@
                     return;
 
                 case FtpStatusCode.ActionNotTakenFileUnavailable:
-                    await DeleteDirectoryRecursive( directory );
+                    await DeleteNonEmptyDirectory( directory );
                     return;
 
                 default:
@@ -212,23 +211,26 @@
         /// </summary>
         /// <param name="directory"></param>
         /// <returns></returns>
-        private async Task DeleteDirectoryRecursive( string directory )
+        private async Task DeleteNonEmptyDirectory( string directory )
         {
             await SendCommandAsync( new FtpCommandEnvelope
                                     {
                                         FtpCommand = FtpCommand.NOOP,
-                                        Data = $"DeleteDirectoryRecursive {directory}"
+                                        Data = $"DeleteNonEmptyDirectory {directory}"
                                     } );
+
             await ChangeWorkingDirectoryAsync( directory );
 
-            foreach ( var file in await ListFilesAsync() )
+            var allNodes = await ListAllAsync();
+
+            foreach ( var file in allNodes.Where( x => x.NodeType == FtpNodeType.File ) )
             {
                 await DeleteFileAsync( file.Name );
             }
 
-            foreach ( var dir in await ListDirectoriesAsync() )
+            foreach ( var dir in allNodes.Where( x => x.NodeType == FtpNodeType.Directory ) )
             {
-                await DeleteDirectoryRecursive( dir.Name );
+                await DeleteNonEmptyDirectory( dir.Name );
             }
 
             await ChangeWorkingDirectoryAsync( ".." );
@@ -292,6 +294,17 @@
             dataSocket.Shutdown( SocketShutdown.Both );
 
             await GetResponseAsync();
+        }
+
+        /// <summary>
+        /// Lists all files in the current working directory
+        /// </summary>
+        /// <returns></returns>
+        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
+        {
+            EnsureLoggedIn();
+            Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
+            return await directoryProvider.ListAllAsync();
         }
 
         /// <summary>
@@ -391,11 +404,15 @@
             if ( HasResponsePending() )
                 await GetResponseAsync();
 
+            await semaphore.WaitAsync();
+
             string commandString = envelope.GetCommandString();
             Logger?.LogDebug( $"[FtpClient] Sending command: {commandString}" );
             commandSocket.Send( commandString.ToAsciiBytes() );
 
             var response = await GetResponseAsync();
+
+            semaphore.Release();
             return response;
         }
 
@@ -467,7 +484,7 @@
         {
             Logger?.LogDebug( "[FtpClient] Determining directory provider" );
             if ( this.UsesMlsd() )
-                return new MlsdDirectoryProvider( this, configuration );
+                return new MlsdDirectoryProvider( this, Logger, configuration );
 
             return new ListDirectoryProvider( this, Logger, configuration );
         }

@@ -38,14 +38,19 @@
                 throw new FtpException( "User must be logged in" );
         }
 
+        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
+        {
+            return await ListNodesAsync();
+        }
+
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            return await ListNodeTypeAsync( FtpNodeType.File );
+            return await ListNodesAsync( FtpNodeType.File );
         }
 
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            return await ListNodeTypeAsync( FtpNodeType.Directory );
+            return await ListNodesAsync( FtpNodeType.Directory );
         }
 
         /// <summary>
@@ -53,10 +58,10 @@
         /// </summary>
         /// <param name="ftpNodeType"></param>
         /// <returns></returns>
-        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType ftpNodeType )
+        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodesAsync( FtpNodeType? ftpNodeType = null )
         {
             EnsureLoggedIn();
-
+            logger?.LogDebug( $"[ListDirectoryProvider] Listing {ftpNodeType}" );
             ftpClient.dataSocket = await ftpClient.ConnectDataSocketAsync();
 
             if ( ftpClient.dataSocket == null )
@@ -73,7 +78,7 @@
             var directoryListing = await RetrieveDirectoryListingAsync();
 
             var nodes = ParseLines( directoryListing )
-                .Where( x => x.NodeType == ftpNodeType )
+                .Where( x => !ftpNodeType.HasValue || x.NodeType == ftpNodeType )
                 .ToList();
 
             return nodes.AsReadOnly();
@@ -127,8 +132,7 @@
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 
-//            if (ftpClient.HasResponsePending())
-                await ftpClient.GetResponseAsync();
+            await ftpClient.GetResponseAsync();
             return lines;
         }
     }
