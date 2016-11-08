@@ -40,7 +40,7 @@
             {
                 NodeType = DetermineNodeType( matches.Groups[ "permissions" ] ),
                 Name = DetermineName( matches.Groups[ "name" ] ),
-                DateModified = DetermineDateModified( matches.Groups[ "modify" ] ),
+                DateModified = DetermineDateModified( matches.Groups[ "date" ] ),
                 Size = DetermineSize( matches.Groups[ "size" ] )
             };
 
