@@ -19,12 +19,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
         public async Task Should_throw_exception_when_folder_nonexistent()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = Program.FtpConfiguration.Port
+            } ) )
             {
                 sut.Logger = Logger;
 
@@ -41,12 +41,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
             string randomDirectoryName = Guid.NewGuid().ToString();
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = Program.FtpConfiguration.Port
+            } ) )
             {
                 sut.Logger = Logger;
 
@@ -64,12 +64,12 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
             string randomDirectoryName = Guid.NewGuid().ToString();
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = Program.FtpConfiguration.Port
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();
@@ -88,10 +88,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 }
                 catch ( Exception e )
                 {
-//                    throw;
                     throw new Exception( e.ToAsyncString() );
                 }
-                //                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeFalse();
+
+                ( await sut.ListDirectoriesAsync() ).Any( x => x.Name == randomDirectoryName ).Should().BeFalse();
             }
         }
     }
