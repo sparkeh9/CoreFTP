@@ -24,8 +24,7 @@
 
             var directories = await ftpClient.ListDirectoriesAsync();
             var files = await ftpClient.ListFilesAsync();
-
-            await ftpClient.CreateDirectoryAsync( "testy" );
+            
             await ftpClient.LogOutAsync();
         }
     }

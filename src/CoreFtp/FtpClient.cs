@@ -17,7 +17,7 @@
 
     public class FtpClient : IDisposable
     {
-        private readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 2 );
+        private readonly SemaphoreSlim commandSemaphore = new SemaphoreSlim( 1, 2 );
 
         private IDirectoryProvider directoryProvider;
         private readonly FtpClientConfiguration configuration;
@@ -52,18 +52,18 @@
 
             await ConnectCommandSocketAsync();
             var usrResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                      {
-                                                          FtpCommand = FtpCommand.USER,
-                                                          Data = username
-                                                      } );
+            {
+                FtpCommand = FtpCommand.USER,
+                Data = username
+            } );
 
             await BailIfResponseNotAsync( usrResponse, FtpStatusCode.SendPasswordCommand, FtpStatusCode.LoggedInProceed );
 
             var passResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.PASS,
-                                                           Data = username != Constants.ANONYMOUS_USER ? configuration.Password : string.Empty
-                                                       } );
+            {
+                FtpCommand = FtpCommand.PASS,
+                Data = username != Constants.ANONYMOUS_USER ? configuration.Password : string.Empty
+            } );
 
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
@@ -105,10 +105,10 @@
             EnsureLoggedIn();
 
             var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                   {
-                                                       FtpCommand = FtpCommand.CWD,
-                                                       Data = directory
-                                                   } );
+            {
+                FtpCommand = FtpCommand.CWD,
+                Data = directory
+            } );
 
             if ( response.FtpStatusCode != FtpStatusCode.FileActionOK )
                 throw new FtpException( response.ResponseMessage );
@@ -149,19 +149,19 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Renaming from {from}, to {to}" );
             var renameFromResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                             {
-                                                                 FtpCommand = FtpCommand.RNFR,
-                                                                 Data = from
-                                                             } );
+            {
+                FtpCommand = FtpCommand.RNFR,
+                Data = from
+            } );
 
             if ( renameFromResponse.FtpStatusCode != FtpStatusCode.FileCommandPending )
                 throw new FtpException( renameFromResponse.ResponseMessage );
 
             var renameToResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                           {
-                                                               FtpCommand = FtpCommand.RNTO,
-                                                               Data = to
-                                                           } );
+            {
+                FtpCommand = FtpCommand.RNTO,
+                Data = to
+            } );
 
             if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
                 throw new FtpException( renameFromResponse.ResponseMessage );
@@ -181,16 +181,11 @@
 
             EnsureLoggedIn();
 
-            await SendCommandAsync( new FtpCommandEnvelope
-                                    {
-                                        FtpCommand = FtpCommand.NOOP,
-                                        Data = "DeleteDirectoryAsync"
-                                    } );
             var rmdResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                      {
-                                                          FtpCommand = FtpCommand.RMD,
-                                                          Data = directory
-                                                      } );
+            {
+                FtpCommand = FtpCommand.RMD,
+                Data = directory
+            } );
             switch ( rmdResponse.FtpStatusCode )
             {
                 case FtpStatusCode.CommandOK:
@@ -213,12 +208,6 @@
         /// <returns></returns>
         private async Task DeleteNonEmptyDirectory( string directory )
         {
-            await SendCommandAsync( new FtpCommandEnvelope
-                                    {
-                                        FtpCommand = FtpCommand.NOOP,
-                                        Data = $"DeleteNonEmptyDirectory {directory}"
-                                    } );
-
             await ChangeWorkingDirectoryAsync( directory );
 
             var allNodes = await ListAllAsync();
@@ -230,7 +219,7 @@
 
             foreach ( var dir in allNodes.Where( x => x.NodeType == FtpNodeType.Directory ) )
             {
-                await DeleteNonEmptyDirectory( dir.Name );
+                await DeleteDirectoryAsync( dir.Name );
             }
 
             await ChangeWorkingDirectoryAsync( ".." );
@@ -248,10 +237,10 @@
             Logger?.LogDebug( $"[FtpClient] Setting client name to {clientName}" );
 
             return await SendCommandAsync( new FtpCommandEnvelope
-                                           {
-                                               FtpCommand = FtpCommand.CLNT,
-                                               Data = clientName
-                                           } );
+            {
+                FtpCommand = FtpCommand.CLNT,
+                Data = clientName
+            } );
         }
 
         /// <summary>
@@ -340,10 +329,10 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Deleting file {fileName}" );
             var deleResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.DELE,
-                                                           Data = fileName
-                                                       } );
+            {
+                FtpCommand = FtpCommand.DELE,
+                Data = fileName
+            } );
 
             if ( deleResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
                 throw new FtpException( deleResponse.ResponseMessage );
@@ -360,12 +349,12 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Setting transfer mode {transferMode}, {secondType}" );
             var typeResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.TYPE,
-                                                           Data = secondType != '\0'
-                                                               ? $"{(char) transferMode} {secondType}"
-                                                               : $"{(char) transferMode}"
-                                                       } );
+            {
+                FtpCommand = FtpCommand.TYPE,
+                Data = secondType != '\0'
+                    ? $"{(char) transferMode} {secondType}"
+                    : $"{(char) transferMode}"
+            } );
 
             if ( typeResponse.FtpStatusCode != FtpStatusCode.CommandOK )
                 throw new FtpException( typeResponse.ResponseMessage );
@@ -381,10 +370,10 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Getting file size for {fileName}" );
             var sizeResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.SIZE,
-                                                           Data = fileName
-                                                       } );
+            {
+                FtpCommand = FtpCommand.SIZE,
+                Data = fileName
+            } );
 
             if ( sizeResponse.FtpStatusCode != FtpStatusCode.FileStatus )
                 throw new FtpException( sizeResponse.ResponseMessage );
@@ -401,10 +390,12 @@
         /// <returns></returns>
         public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
         {
-            if ( HasResponsePending() )
-                await GetResponseAsync();
+            await commandSemaphore.WaitAsync();
 
-            await semaphore.WaitAsync();
+            if ( HasResponsePending() )
+            {
+                await GetResponseAsync();
+            }
 
             string commandString = envelope.GetCommandString();
             Logger?.LogDebug( $"[FtpClient] Sending command: {commandString}" );
@@ -412,7 +403,7 @@
 
             var response = await GetResponseAsync();
 
-            semaphore.Release();
+            commandSemaphore.Release();
             return response;
         }
 
@@ -424,9 +415,9 @@
         public async Task<FtpResponse> SendCommandAsync( FtpCommand command )
         {
             return await SendCommandAsync( new FtpCommandEnvelope
-                                           {
-                                               FtpCommand = command
-                                           } );
+            {
+                FtpCommand = command
+            } );
         }
 
         public bool HasResponsePending()
@@ -526,34 +517,34 @@
             if ( directories.Count == 1 )
             {
                 await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.MKD,
-                                            Data = directories.First()
-                                        } );
+                {
+                    FtpCommand = FtpCommand.MKD,
+                    Data = directories.First()
+                } );
                 return;
             }
 
             foreach ( string directory in directories )
             {
                 var response = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = FtpCommand.CWD,
-                                                           Data = directory
-                                                       } );
+                {
+                    FtpCommand = FtpCommand.CWD,
+                    Data = directory
+                } );
 
                 if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
                     continue;
 
                 await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.MKD,
-                                            Data = directory
-                                        } );
+                {
+                    FtpCommand = FtpCommand.MKD,
+                    Data = directory
+                } );
                 await SendCommandAsync( new FtpCommandEnvelope
-                                        {
-                                            FtpCommand = FtpCommand.CWD,
-                                            Data = directory
-                                        } );
+                {
+                    FtpCommand = FtpCommand.CWD,
+                    Data = directory
+                } );
             }
 
             await ChangeWorkingDirectoryAsync( originalPath );
@@ -573,10 +564,10 @@
             dataSocket = await ConnectDataSocketAsync();
 
             var retrResponse = await SendCommandAsync( new FtpCommandEnvelope
-                                                       {
-                                                           FtpCommand = command,
-                                                           Data = fileName
-                                                       } );
+            {
+                FtpCommand = command,
+                Data = fileName
+            } );
 
             if ( ( retrResponse.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) &&
                  ( retrResponse.FtpStatusCode != FtpStatusCode.OpeningData ) &&
@@ -682,7 +673,7 @@
         {
             Logger?.LogDebug( "Disposing of resources" );
             Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
-            semaphore.Release();
+            commandSemaphore.Release();
             commandSocket?.Dispose();
             dataSocket?.Dispose();
         }

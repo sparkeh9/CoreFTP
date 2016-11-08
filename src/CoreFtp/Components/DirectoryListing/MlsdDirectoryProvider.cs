@@ -85,7 +85,7 @@
             return nodes.AsReadOnly();
         }
 
-        private async Task<string[]> RetrieveDirectoryListingAsync()
+        private Task<string[]> RetrieveDirectoryListingAsync()
         {
             var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
             bool hasTimedOut;
@@ -110,9 +110,7 @@
 
             socket.Shutdown( SocketShutdown.Both );
 
-//            if ( ftpClient.HasResponsePending() )
-//                await ftpClient.GetResponseAsync();
-            return lines;
+            return Task.FromResult( lines );
         }
     }
 }
