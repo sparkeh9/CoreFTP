@@ -10,6 +10,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Components.DirectoryListing;
+    using Components.DnsResolution;
     using Enum;
     using Infrastructure;
     using Infrastructure.Extensions;
@@ -19,6 +20,7 @@
     {
         private readonly SemaphoreSlim commandSemaphore = new SemaphoreSlim( 1, 2 );
 
+        private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
         private readonly FtpClientConfiguration configuration;
         public ILogger Logger { get; set; }
@@ -35,6 +37,8 @@
 
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
+
+            dnsResolver = new DnsResolver();
         }
 
         /// <summary>
@@ -595,11 +599,14 @@
             try
             {
                 Logger?.LogDebug( $"Connecting command socket, {configuration.Host}:{configuration.Port}" );
+
+                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, configuration.Port, configuration.IpVersion );
+
                 commandSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
                 {
                     ReceiveTimeout = configuration.TimeoutSeconds * 1000
                 };
-                commandSocket.Connect( configuration.Host, configuration.Port );
+                commandSocket.Connect( ipEndpoint );
 
                 var response = await GetResponseAsync();
                 await BailIfResponseNotAsync( response, FtpStatusCode.SendUserCommand );
@@ -618,12 +625,6 @@
         /// <returns></returns>
         internal async Task<Socket> ConnectDataSocketAsync()
         {
-//            if ( HasResponsePending() )
-//            {
-//                var response = await GetResponseAsync();
-//                throw new Exception( "unexpected pending data " + response );
-//            }
-
             Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
             var epsvResult = await SendCommandAsync( FtpCommand.EPSV );
 
