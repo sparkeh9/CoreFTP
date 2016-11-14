@@ -639,9 +639,15 @@
             Socket socket = null;
             try
             {
-                Logger?.LogDebug( $"Connecting data socket, {configuration.Host}:{passivePortNumber}" );
-                socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp );
-                socket.Connect( configuration.Host, passivePortNumber.Value );
+                Logger?.LogDebug( $"Connecting data socket, {configuration.Host}:{passivePortNumber.Value}" );
+
+                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, passivePortNumber.Value, configuration.IpVersion );
+
+                socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
+                {
+                    ReceiveTimeout = configuration.TimeoutSeconds * 1000
+                };
+                socket.Connect( ipEndpoint );
 
                 return socket;
             }
