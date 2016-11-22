@@ -22,7 +22,7 @@
 
         private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
-        private readonly FtpClientConfiguration configuration;
+        public FtpClientConfiguration configuration { get; }
         public ILogger Logger { get; set; }
         internal IEnumerable<string> Features { get; set; }
         internal Socket commandSocket { get; set; }
