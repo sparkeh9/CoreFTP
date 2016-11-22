@@ -22,7 +22,7 @@
 
         private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
-        public FtpClientConfiguration configuration { get; }
+        public FtpClientConfiguration Configuration { get; }
         public ILogger Logger { get; set; }
         internal IEnumerable<string> Features { get; set; }
         internal Socket commandSocket { get; set; }
@@ -33,7 +33,7 @@
 
         public FtpClient( FtpClientConfiguration configuration )
         {
-            this.configuration = configuration;
+            this.Configuration = configuration;
 
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
@@ -50,7 +50,7 @@
             if ( IsConnected )
                 await LogOutAsync();
 
-            string username = configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : configuration.Username;
+            string username = Configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : Configuration.Username;
 
             Logger?.LogDebug( $"[FtpClient] Logging In {username}" );
 
@@ -66,7 +66,7 @@
             var passResponse = await SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.PASS,
-                Data = username != Constants.ANONYMOUS_USER ? configuration.Password : string.Empty
+                Data = username != Constants.ANONYMOUS_USER ? Configuration.Password : string.Empty
             } );
 
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
@@ -74,8 +74,12 @@
 
             Features = await DetermineFeaturesAsync();
 
-            await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
-            await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
+            await SetTransferMode( Configuration.Mode, Configuration.ModeSecondType );
+
+            if ( Configuration.BaseDirectory != "/" )
+                await CreateDirectoryAsync( Configuration.BaseDirectory );
+
+            await ChangeWorkingDirectoryAsync( Configuration.BaseDirectory );
 
             directoryProvider = DetermineDirectoryProvider();
         }
@@ -479,9 +483,9 @@
         {
             Logger?.LogDebug( "[FtpClient] Determining directory provider" );
             if ( this.UsesMlsd() )
-                return new MlsdDirectoryProvider( this, Logger, configuration );
+                return new MlsdDirectoryProvider( this, Logger, Configuration );
 
-            return new ListDirectoryProvider( this, Logger, configuration );
+            return new ListDirectoryProvider( this, Logger, Configuration );
         }
 
         private async Task<IEnumerable<string>> DetermineFeaturesAsync()
@@ -598,13 +602,13 @@
         {
             try
             {
-                Logger?.LogDebug( $"Connecting command socket, {configuration.Host}:{configuration.Port}" );
+                Logger?.LogDebug( $"Connecting command socket, {Configuration.Host}:{Configuration.Port}" );
 
-                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, configuration.Port, configuration.IpVersion );
+                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion );
 
                 commandSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
                 {
-                    ReceiveTimeout = configuration.TimeoutSeconds * 1000
+                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
                 };
                 commandSocket.Connect( ipEndpoint );
 
@@ -639,13 +643,13 @@
             Socket socket = null;
             try
             {
-                Logger?.LogDebug( $"Connecting data socket, {configuration.Host}:{passivePortNumber.Value}" );
+                Logger?.LogDebug( $"Connecting data socket, {Configuration.Host}:{passivePortNumber.Value}" );
 
-                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, passivePortNumber.Value, configuration.IpVersion );
+                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, passivePortNumber.Value, Configuration.IpVersion );
 
                 socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
                 {
-                    ReceiveTimeout = configuration.TimeoutSeconds * 1000
+                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
                 };
                 socket.Connect( ipEndpoint );
 
