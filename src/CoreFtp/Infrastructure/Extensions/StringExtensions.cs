@@ -7,17 +7,23 @@
 
     public static class StringExtensions
     {
-        public static bool IsNullOrEmpty( this string operand )
+        internal static bool IsNullOrEmpty( this string operand )
         {
             return string.IsNullOrEmpty( operand );
         }
 
-        public static bool IsNullOrWhiteSpace( this string operand )
+        internal static bool IsNullOrWhiteSpace( this string operand )
         {
             return string.IsNullOrWhiteSpace( operand );
         }
 
-        public static int? ExtractEpsvPortNumber( this string operand )
+        internal static string CombineAsUriWith( this string operand, string rightHandSide )
+        {
+            return string.Format( "{0}/{1}", operand.TrimEnd( '/' ), rightHandSide.Trim( '/' ) );
+        }
+
+
+        internal static int? ExtractEpsvPortNumber( this string operand )
         {
             var regex = new Regex( @"(?:\|)(?<PortNumber>\d+)(?:\|)", RegexOptions.Compiled );
 
@@ -29,7 +35,7 @@
             return int.Parse( match.Groups[ "PortNumber" ].Value );
         }
 
-        public static FtpNodeType ToNodeType( this string operand )
+        internal static FtpNodeType ToNodeType( this string operand )
         {
             switch ( operand )
             {
@@ -42,7 +48,7 @@
             return FtpNodeType.SymbolicLink;
         }
 
-        public static FtpNodeInformation ToFtpNode( this string operand )
+        internal static FtpNodeInformation ToFtpNode( this string operand )
         {
             var dictionary = operand.Split( ';' )
                                     .Select( s => s.Split( '=' ) )

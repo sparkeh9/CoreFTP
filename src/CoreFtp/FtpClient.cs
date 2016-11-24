@@ -22,18 +22,18 @@
 
         private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
-        public FtpClientConfiguration configuration { get; }
+        public FtpClientConfiguration Configuration { get; }
         public ILogger Logger { get; set; }
         internal IEnumerable<string> Features { get; set; }
         internal Socket commandSocket { get; set; }
         internal Socket dataSocket { get; set; }
         public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
         public bool IsAuthenticated { get; set; }
-        public string WorkingDirectory { get; set; }
+        public string WorkingDirectory { get; set; } = "/";
 
         public FtpClient( FtpClientConfiguration configuration )
         {
-            this.configuration = configuration;
+            this.Configuration = configuration;
 
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
@@ -50,7 +50,9 @@
             if ( IsConnected )
                 await LogOutAsync();
 
-            string username = configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : configuration.Username;
+            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
+
+            string username = Configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : Configuration.Username;
 
             Logger?.LogDebug( $"[FtpClient] Logging In {username}" );
 
@@ -66,7 +68,7 @@
             var passResponse = await SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.PASS,
-                Data = username != Constants.ANONYMOUS_USER ? configuration.Password : string.Empty
+                Data = username != Constants.ANONYMOUS_USER ? Configuration.Password : string.Empty
             } );
 
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
@@ -74,8 +76,12 @@
 
             Features = await DetermineFeaturesAsync();
 
-            await SetTransferMode( configuration.Mode, configuration.ModeSecondType );
-            await ChangeWorkingDirectoryAsync( configuration.BaseDirectory );
+            await SetTransferMode( Configuration.Mode, Configuration.ModeSecondType );
+
+            if ( Configuration.BaseDirectory != "/" )
+                await CreateDirectoryAsync( Configuration.BaseDirectory );
+
+            await ChangeWorkingDirectoryAsync( Configuration.BaseDirectory );
 
             directoryProvider = DetermineDirectoryProvider();
         }
@@ -139,7 +145,7 @@
 
             EnsureLoggedIn();
 
-            await CreateDirectoryStructureRecursively( directory.Split( '/' ) );
+            await CreateDirectoryStructureRecursively( directory.Split( '/' ), directory.StartsWith( "/" ) );
         }
 
         /// <summary>
@@ -181,6 +187,9 @@
             if ( directory.IsNullOrWhiteSpace() || directory.Equals( "." ) )
                 throw new ArgumentOutOfRangeException( nameof( directory ), "Directory supplied was not valid" );
 
+            if ( directory == "/" )
+                return;
+
             Logger?.LogDebug( $"[FtpClient] Deleting directory {directory}" );
 
             EnsureLoggedIn();
@@ -190,6 +199,7 @@
                 FtpCommand = FtpCommand.RMD,
                 Data = directory
             } );
+
             switch ( rmdResponse.FtpStatusCode )
             {
                 case FtpStatusCode.CommandOK:
@@ -267,10 +277,11 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
-            Logger?.LogDebug( $"[FtpClient] Opening file read stream for {fileName}" );
-            var segments = fileName.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
-            await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray() );
-            return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this, Logger );
+            string filePath = WorkingDirectory.CombineAsUriWith( fileName );
+            Logger?.LogDebug( $"[FtpClient] Opening file read stream for {filePath}" );
+            var segments = filePath.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
+            await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray(), filePath.StartsWith( "/" ) );
+            return new FtpWriteFileStream( await OpenFileStreamAsync( filePath, FtpCommand.STOR ), this, Logger );
         }
 
         /// <summary>
@@ -479,9 +490,9 @@
         {
             Logger?.LogDebug( "[FtpClient] Determining directory provider" );
             if ( this.UsesMlsd() )
-                return new MlsdDirectoryProvider( this, Logger, configuration );
+                return new MlsdDirectoryProvider( this, Logger, Configuration );
 
-            return new ListDirectoryProvider( this, Logger, configuration );
+            return new ListDirectoryProvider( this, Logger, Configuration );
         }
 
         private async Task<IEnumerable<string>> DetermineFeaturesAsync()
@@ -509,11 +520,15 @@
         /// Creates a directory structure recursively given a path
         /// </summary>
         /// <param name="directories"></param>
+        /// <param name="isRootedPath"></param>
         /// <returns></returns>
-        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories )
+        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories, bool isRootedPath )
         {
             Logger?.LogDebug( $"[FtpClient] Creating directory structure recursively {string.Join( "/", directories )}" );
             string originalPath = WorkingDirectory;
+
+            if ( isRootedPath && directories.Any())
+                await ChangeWorkingDirectoryAsync( "/" );
 
             if ( !directories.Any() )
                 return;
@@ -525,11 +540,16 @@
                     FtpCommand = FtpCommand.MKD,
                     Data = directories.First()
                 } );
+
+                await ChangeWorkingDirectoryAsync( originalPath );
                 return;
             }
 
             foreach ( string directory in directories )
             {
+                if ( directory.IsNullOrWhiteSpace() )
+                    continue;
+
                 var response = await SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.CWD,
@@ -598,13 +618,13 @@
         {
             try
             {
-                Logger?.LogDebug( $"Connecting command socket, {configuration.Host}:{configuration.Port}" );
+                Logger?.LogDebug( $"Connecting command socket, {Configuration.Host}:{Configuration.Port}" );
 
-                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, configuration.Port, configuration.IpVersion );
+                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion );
 
                 commandSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
                 {
-                    ReceiveTimeout = configuration.TimeoutSeconds * 1000
+                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
                 };
                 commandSocket.Connect( ipEndpoint );
 
@@ -639,13 +659,13 @@
             Socket socket = null;
             try
             {
-                Logger?.LogDebug( $"Connecting data socket, {configuration.Host}:{passivePortNumber.Value}" );
+                Logger?.LogDebug( $"Connecting data socket, {Configuration.Host}:{passivePortNumber.Value}" );
 
-                var ipEndpoint = await dnsResolver.ResolveAsync( configuration.Host, passivePortNumber.Value, configuration.IpVersion );
+                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, passivePortNumber.Value, Configuration.IpVersion );
 
                 socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
                 {
-                    ReceiveTimeout = configuration.TimeoutSeconds * 1000
+                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
                 };
                 socket.Connect( ipEndpoint );
 

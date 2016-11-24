@@ -20,3 +20,4 @@ using System.Runtime.InteropServices;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 
 [ assembly: Guid( "d8a3eb76-d656-40a5-af83-a1855014e051" ) ]
+[ assembly: InternalsVisibleTo( "CoreFtp.Tests.Integration" ) ]
