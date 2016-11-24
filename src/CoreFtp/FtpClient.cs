@@ -29,7 +29,7 @@
         internal Socket dataSocket { get; set; }
         public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
         public bool IsAuthenticated { get; set; }
-        public string WorkingDirectory { get; set; }
+        public string WorkingDirectory { get; set; } = "/";
 
         public FtpClient( FtpClientConfiguration configuration )
         {
@@ -49,6 +49,8 @@
         {
             if ( IsConnected )
                 await LogOutAsync();
+
+            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
 
             string username = Configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : Configuration.Username;
 
@@ -143,7 +145,7 @@
 
             EnsureLoggedIn();
 
-            await CreateDirectoryStructureRecursively( directory.Split( '/' ) );
+            await CreateDirectoryStructureRecursively( directory.Split( '/' ), directory.StartsWith( "/" ) );
         }
 
         /// <summary>
@@ -185,6 +187,9 @@
             if ( directory.IsNullOrWhiteSpace() || directory.Equals( "." ) )
                 throw new ArgumentOutOfRangeException( nameof( directory ), "Directory supplied was not valid" );
 
+            if ( directory == "/" )
+                return;
+
             Logger?.LogDebug( $"[FtpClient] Deleting directory {directory}" );
 
             EnsureLoggedIn();
@@ -194,6 +199,7 @@
                 FtpCommand = FtpCommand.RMD,
                 Data = directory
             } );
+
             switch ( rmdResponse.FtpStatusCode )
             {
                 case FtpStatusCode.CommandOK:
@@ -271,10 +277,11 @@
         /// <returns></returns>
         public async Task<Stream> OpenFileWriteStreamAsync( string fileName )
         {
-            Logger?.LogDebug( $"[FtpClient] Opening file read stream for {fileName}" );
-            var segments = fileName.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
-            await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray() );
-            return new FtpWriteFileStream( await OpenFileStreamAsync( fileName, FtpCommand.STOR ), this, Logger );
+            string filePath = WorkingDirectory.CombineAsUriWith( fileName );
+            Logger?.LogDebug( $"[FtpClient] Opening file read stream for {filePath}" );
+            var segments = filePath.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
+            await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray(), filePath.StartsWith( "/" ) );
+            return new FtpWriteFileStream( await OpenFileStreamAsync( filePath, FtpCommand.STOR ), this, Logger );
         }
 
         /// <summary>
@@ -513,11 +520,15 @@
         /// Creates a directory structure recursively given a path
         /// </summary>
         /// <param name="directories"></param>
+        /// <param name="isRootedPath"></param>
         /// <returns></returns>
-        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories )
+        private async Task CreateDirectoryStructureRecursively( IReadOnlyCollection<string> directories, bool isRootedPath )
         {
             Logger?.LogDebug( $"[FtpClient] Creating directory structure recursively {string.Join( "/", directories )}" );
             string originalPath = WorkingDirectory;
+
+            if ( isRootedPath && directories.Any())
+                await ChangeWorkingDirectoryAsync( "/" );
 
             if ( !directories.Any() )
                 return;
@@ -529,11 +540,16 @@
                     FtpCommand = FtpCommand.MKD,
                     Data = directories.First()
                 } );
+
+                await ChangeWorkingDirectoryAsync( originalPath );
                 return;
             }
 
             foreach ( string directory in directories )
             {
+                if ( directory.IsNullOrWhiteSpace() )
+                    continue;
+
                 var response = await SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.CWD,
