@@ -117,7 +117,7 @@
                 int byteCount = ftpClient.dataSocket.Receive( buffer, buffer.Length, 0 );
                 if ( byteCount == 0 ) break;
 
-                rawResult.Append( Encoding.ASCII.GetString( buffer, 0, byteCount ) );
+                rawResult.Append(ftpClient.Encoding.GetString( buffer, 0, byteCount ) );
 
                 hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
             } while ( hasTimedOut );
