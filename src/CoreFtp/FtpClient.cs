@@ -76,7 +76,7 @@
             IsAuthenticated = true;
 
             Features = await DetermineFeaturesAsync();
-            if (Encoding == Encoding.ASCII && Features.Any(x => x == "UTF8"))
+            if (Encoding == Encoding.ASCII && Features.Any(x => x == Constants.UTF8))
             {
                 Encoding = Encoding.UTF8;
             }

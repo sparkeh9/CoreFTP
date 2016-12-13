@@ -8,7 +8,7 @@
         "NETStandard.Library": "1.6.0",
         "NSubstitute": "2.0.0-rc",
         "dotnet-test-xunit": "2.2.0-preview2-build1029",
-        "CoreFtp": "1.1.10-*",
+        "CoreFtp": "1.2.0-*",
         "Microsoft.Extensions.Configuration": "1.0.0",
         "Microsoft.Extensions.Configuration.FileExtensions": "1.0.0",
         "Microsoft.Extensions.Configuration.Json": "1.0.0",
