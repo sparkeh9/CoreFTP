@@ -30,6 +30,7 @@
         public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
         public bool IsAuthenticated { get; set; }
         public string WorkingDirectory { get; set; } = "/";
+        public Encoding Encoding { get; set; } = Encoding.ASCII;
 
         public FtpClient( FtpClientConfiguration configuration )
         {
@@ -75,6 +76,18 @@
             IsAuthenticated = true;
 
             Features = await DetermineFeaturesAsync();
+            if (Encoding == Encoding.ASCII && Features.Any(x => x == "UTF8"))
+            {
+                Encoding = Encoding.UTF8;
+            }
+
+            if (Encoding == Encoding.UTF8)
+            {
+                // If the server supports UTF8 it should already be enabled and this
+                // command should not matter however there are conflicting drafts
+                // about this so we'll just execute it to be safe. 
+                await SendCommandAsync("OPTS UTF8 ON");
+            }
 
             await SetTransferMode( Configuration.Mode, Configuration.ModeSecondType );
 
@@ -405,21 +418,8 @@
         /// <returns></returns>
         public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
         {
-            await commandSemaphore.WaitAsync();
-
-            if ( HasResponsePending() )
-            {
-                await GetResponseAsync();
-            }
-
             string commandString = envelope.GetCommandString();
-            Logger?.LogDebug( $"[FtpClient] Sending command: {commandString}" );
-            commandSocket.Send( commandString.ToAsciiBytes() );
-
-            var response = await GetResponseAsync();
-
-            commandSemaphore.Release();
-            return response;
+            return await SendCommandAsync(commandString);
         }
 
         /// <summary>
@@ -433,6 +433,25 @@
             {
                 FtpCommand = command
             } );
+        }
+
+        public async Task<FtpResponse> SendCommandAsync(string command)
+        {
+            await commandSemaphore.WaitAsync();
+
+            if (HasResponsePending())
+            {
+                await GetResponseAsync();
+            }
+
+            Logger?.LogDebug($"[FtpClient] Sending command: {command}");
+            byte[] data = Encoding.GetBytes($"{command}\r\n");
+            commandSocket.Send(data);
+
+            var response = await GetResponseAsync();
+
+            commandSemaphore.Release();
+            return response;
         }
 
         public bool HasResponsePending()
