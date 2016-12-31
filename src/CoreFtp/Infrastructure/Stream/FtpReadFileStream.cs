@@ -1,4 +1,4 @@
-namespace CoreFtp.Infrastructure
+namespace CoreFtp.Infrastructure.Stream
 {
     using System.IO;
     using System.Threading;
@@ -60,8 +60,7 @@ namespace CoreFtp.Infrastructure
             Logger?.LogDebug( "[FtpReadFileStream] WriteAsync" );
             await encapsulatedStream.WriteAsync( buffer, offset, count, cancellationToken );
         }
-
-
+        
         public override void Flush()
         {
             Logger?.LogDebug( "[FtpReadFileStream] Flush" );

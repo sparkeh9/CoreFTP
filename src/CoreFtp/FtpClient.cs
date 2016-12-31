@@ -14,6 +14,7 @@
     using Enum;
     using Infrastructure;
     using Infrastructure.Extensions;
+    using Infrastructure.Stream;
     using Microsoft.Extensions.Logging;
 
     public class FtpClient : IDisposable
@@ -24,13 +25,13 @@
         private IDirectoryProvider directoryProvider;
         public FtpClientConfiguration Configuration { get; }
         public ILogger Logger { get; set; }
-        internal IEnumerable<string> Features { get; set; }
+        internal IEnumerable<string> Features { get; private set; }
         internal Socket commandSocket { get; set; }
         internal Socket dataSocket { get; set; }
         public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
-        public bool IsAuthenticated { get; set; }
-        public string WorkingDirectory { get; set; } = "/";
-        public Encoding Encoding { get; set; } = Encoding.ASCII;
+        public bool IsAuthenticated { get; private set; }
+        public string WorkingDirectory { get; private set; } = "/";
+        public Encoding Encoding { get; private set; } = Encoding.ASCII;
 
         public FtpClient( FtpClientConfiguration configuration )
         {
@@ -479,7 +480,7 @@
                     if ( byteCount == 0 )
                         break;
 
-                    statusMessage += Encoding.ASCII.GetString( buffer, 0, byteCount );
+                    statusMessage += Encoding.GetString( buffer, 0, byteCount );
 
                     if ( byteCount < buffer.Length )
                         break;

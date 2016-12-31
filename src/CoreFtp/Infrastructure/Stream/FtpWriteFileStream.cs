@@ -1,4 +1,4 @@
-﻿namespace CoreFtp.Infrastructure
+﻿namespace CoreFtp.Infrastructure.Stream
 {
     using System.IO;
     using System.Threading;

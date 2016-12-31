@@ -19,10 +19,7 @@
 
         public async Task<IPEndPoint> ResolveAsync( string endpoint, int port, IpVersion ipVersion = IpVersion.IpV4 )
         {
-            string cacheKey = string.Join( ":",
-                                           endpoint,
-                                           port,
-                                           ipVersion );
+            string cacheKey = $"{endpoint}:{port}:{ipVersion}";
 
             if ( port < IPEndPoint.MinPort || port > IPEndPoint.MaxPort )
                 throw new ArgumentOutOfRangeException( nameof( port ) );
@@ -30,8 +27,7 @@
             if ( cache.HasKey( cacheKey ) )
                 return cache.Get<IPEndPoint>( cacheKey );
 
-
-            var addressFamily = ipVersion == IpVersion.IpV4
+            var addressFamily = ipVersion.HasFlag( IpVersion.IpV4 )
                 ? AddressFamily.InterNetwork
                 : AddressFamily.InterNetworkV6;
 
@@ -59,10 +55,21 @@
                     return ipEndpoint;
                 }
 
+
+                if ( addressFamily == AddressFamily.InterNetwork && ipVersion.HasFlag( IpVersion.IpV6 ) )
+                {
+                    ipEndpoint = await ResolveAsync( endpoint, port, IpVersion.IpV6 );
+
+                    if ( ipEndpoint != null )
+                    {
+                        cache.Add( cacheKey, ipEndpoint, TimeSpan.FromMinutes( 60 ) );
+                        return ipEndpoint;
+                    }
+                }
+
                 var firstAddress = allAddresses.FirstOrDefault();
                 if ( firstAddress == null )
                     return null;
-
 
                 switch ( firstAddress.AddressFamily )
                 {
@@ -87,7 +94,7 @@
             }
         }
 
-        private IPAddress TryGetIpAddress( string endpoint )
+        private static IPAddress TryGetIpAddress( string endpoint )
         {
             var tokens = endpoint.Split( ':' );
 
