@@ -1,6 +1,8 @@
 ﻿namespace CoreFtp.Tests.Integration
 {
     using System;
+    using System.Diagnostics;
+    using System.Threading;
     using Logger;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +14,7 @@
     {
         public static FtpConfiguration FtpConfiguration;
         public static ILoggerFactory LoggerFactory;
+        public static bool Initialised = false;
 
         public static void Main( string[] args )
         {
@@ -20,6 +23,12 @@
 
         public static void Initialise( ITestOutputHelper outputHelper = null )
         {
+            if ( !Initialised )
+            {
+                Console.WriteLine( "not Initialised" );
+//                return;
+            }
+            Initialised = true;
             LoggerFactory = new LoggerFactory()
                 .AddXunitConsole( outputHelper )
                 .AddDebug( LogLevel.Debug );

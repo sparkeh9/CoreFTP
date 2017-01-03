@@ -21,7 +21,7 @@
         {
             var sut = new DnsResolver();
 
-            var endpoint = await sut.ResolveAsync( ipAddress, 21 );
+            var endpoint = await sut.ResolveAsync( ipAddress, 21);
             endpoint.Should().BeOfType<IPEndPoint>();
         }
 

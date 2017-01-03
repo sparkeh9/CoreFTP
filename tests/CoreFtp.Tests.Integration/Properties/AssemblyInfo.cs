@@ -20,4 +20,6 @@ using Xunit;
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 
 [ assembly: Guid( "13781bec-50bc-476b-8b96-ce12f94a2c8f" ) ]
-[ assembly: CollectionBehavior( DisableTestParallelization = true ) ]
+// Disable test parallelisation due to xUnit issue with async tests 
+// Message: "There is no currently active test case"
+[assembly: CollectionBehavior( DisableTestParallelization = true ) ]

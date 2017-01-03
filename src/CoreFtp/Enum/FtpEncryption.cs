@@ -3,6 +3,7 @@
     public enum FtpEncryption
     {
         None,
-        Implicit
+        Implicit,
+        Explicit
     }
 }

@@ -67,10 +67,10 @@
             if ( ftpClient.dataSocket == null )
                 throw new FtpException( "Could not establish a data connection" );
 
-            var result = await ftpClient.SendCommandAsync( new FtpCommandEnvelope
-                                                           {
-                                                               FtpCommand = FtpCommand.LIST
-                                                           } );
+            var result = await ftpClient.SocketStream.SendCommandAsync( new FtpCommandEnvelope
+            {
+                FtpCommand = FtpCommand.LIST
+            } );
 
             if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
                 throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
@@ -117,7 +117,7 @@
                 int byteCount = ftpClient.dataSocket.Receive( buffer, buffer.Length, 0 );
                 if ( byteCount == 0 ) break;
 
-                rawResult.Append(ftpClient.Encoding.GetString( buffer, 0, byteCount ) );
+                rawResult.Append( ftpClient.SocketStream.Encoding.GetString( buffer, 0, byteCount ) );
 
                 hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
             } while ( hasTimedOut );
@@ -132,7 +132,7 @@
 
             ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
 
-            await ftpClient.GetResponseAsync();
+            await ftpClient.SocketStream.GetResponseAsync();
             return lines;
         }
     }

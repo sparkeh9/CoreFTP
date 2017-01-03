@@ -37,9 +37,9 @@ namespace CoreFtp.Infrastructure.Stream
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            if ( client.HasResponsePending() )
+            if ( client.SocketStream.HasResponsePending() )
             {
-                Task.WaitAny( client.GetResponseAsync(), Task.Delay( 5000 ) );
+                Task.WaitAny( client.SocketStream.GetResponseAsync(), Task.Delay( 5000 ) );
             }
         }
 
@@ -60,7 +60,7 @@ namespace CoreFtp.Infrastructure.Stream
             Logger?.LogDebug( "[FtpReadFileStream] WriteAsync" );
             await encapsulatedStream.WriteAsync( buffer, offset, count, cancellationToken );
         }
-        
+
         public override void Flush()
         {
             Logger?.LogDebug( "[FtpReadFileStream] Flush" );

@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
+    using System.Threading;
     using System.Threading.Tasks;
     using Enum;
     using Infrastructure.Caching;
@@ -17,7 +18,7 @@
             cache = new InMemoryCache();
         }
 
-        public async Task<IPEndPoint> ResolveAsync( string endpoint, int port, IpVersion ipVersion = IpVersion.IpV4 )
+        public async Task<IPEndPoint> ResolveAsync( string endpoint, int port, IpVersion ipVersion = IpVersion.IpV4, CancellationToken token = default( CancellationToken ) )
         {
             string cacheKey = $"{endpoint}:{port}:{ipVersion}";
 
@@ -31,6 +32,8 @@
                 ? AddressFamily.InterNetwork
                 : AddressFamily.InterNetworkV6;
 
+
+            token.ThrowIfCancellationRequested();
 
             IPEndPoint ipEndpoint;
 
@@ -58,7 +61,7 @@
 
                 if ( addressFamily == AddressFamily.InterNetwork && ipVersion.HasFlag( IpVersion.IpV6 ) )
                 {
-                    ipEndpoint = await ResolveAsync( endpoint, port, IpVersion.IpV6 );
+                    ipEndpoint = await ResolveAsync( endpoint, port, IpVersion.IpV6, token );
 
                     if ( ipEndpoint != null )
                     {
@@ -94,7 +97,7 @@
             }
         }
 
-        private static IPAddress TryGetIpAddress( string endpoint )
+        private IPAddress TryGetIpAddress( string endpoint )
         {
             var tokens = endpoint.Split( ':' );
 
