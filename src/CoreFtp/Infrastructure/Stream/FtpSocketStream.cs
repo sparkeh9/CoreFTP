@@ -149,8 +149,11 @@
         {
             await ConnectSocketAsync( token );
 
-            // Throw away welcome message
-            await GetResponseAsync( CancellationToken.None );
+            if ( SocketDataAvailable() )
+            {
+                // Throw away welcome message
+                await GetResponseAsync( CancellationToken.None );
+            }
 
             if ( !Configuration.ShouldEncrypt )
                 return;
@@ -204,9 +207,9 @@
             return Socket != null && Socket.Available > 0;
         }
 
-        public int SocketDataAvailable()
+        public bool SocketDataAvailable()
         {
-            return Socket?.Available ?? 0;
+            return ( Socket?.Available ?? 0 ) > 0;
         }
 
         public async Task<FtpResponse> SendCommandAsync( FtpCommand command, CancellationToken token = default( CancellationToken ) )
