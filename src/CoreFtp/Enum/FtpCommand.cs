@@ -23,6 +23,8 @@
         RNTO,
         SIZE,
         TYPE,
-        FEAT
+        FEAT,
+        PBSZ,
+        PROT
     }
 }

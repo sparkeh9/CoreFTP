@@ -40,6 +40,7 @@
         internal FtpSocketStream SocketStream { get; set; }
         internal Socket dataSocket { get; set; }
         public bool IsConnected => SocketStream != null && SocketStream.IsConnected;
+        public bool IsEncrypted => SocketStream != null && SocketStream.IsEncrypted;
         public bool IsAuthenticated { get; private set; }
         public string WorkingDirectory { get; private set; } = "/";
 
@@ -52,6 +53,8 @@
 
             dnsResolver = new DnsResolver();
             SocketStream = new FtpSocketStream( Configuration, dnsResolver );
+
+            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
 
         /// <summary>
@@ -63,20 +66,19 @@
             if ( IsConnected )
                 await LogOutAsync();
 
-            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
+            string username = Configuration.Username.IsNullOrWhiteSpace()
+                ? Constants.ANONYMOUS_USER
+                : Configuration.Username;
 
-            string username = Configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : Configuration.Username;
             await SocketStream.ConnectAsync();
-            var welcomeMessage = await SocketStream.GetResponseAsync( CancellationToken.None );
 
-            Logger?.LogDebug( $"[FtpClient] Logging In {username}" );
             var usrResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.USER,
                 Data = username
             } );
 
-            await BailIfResponseNotAsync( usrResponse,FtpStatusCode.SendUserCommand, FtpStatusCode.SendPasswordCommand, FtpStatusCode.LoggedInProceed );
+            await BailIfResponseNotAsync( usrResponse, FtpStatusCode.SendUserCommand, FtpStatusCode.SendPasswordCommand, FtpStatusCode.LoggedInProceed );
 
             var passResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
@@ -86,6 +88,21 @@
 
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
+
+            if ( SocketStream.IsEncrypted && Configuration.EncryptionType == FtpEncryption.Explicit )
+            {
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.PBSZ,
+                    Data = "0"
+                } );
+
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.PROT,
+                    Data = "P"
+                } );
+            }
 
             Features = await DetermineFeaturesAsync();
             if ( SocketStream.Encoding == Encoding.ASCII && Features.Any( x => x == Constants.UTF8 ) )
@@ -540,7 +557,7 @@
             if ( !IsConnected || !IsAuthenticated )
                 throw new FtpException( "User must be logged in" );
         }
-        
+
         /// <summary>
         /// Produces a data socket using Extended Passive mode
         /// </summary>

@@ -3,7 +3,10 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Net.Security;
     using System.Net.Sockets;
+    using System.Security.Authentication;
+    using System.Security.Cryptography.X509Certificates;
     using System.Text;
     using System.Text.RegularExpressions;
     using System.Threading;
@@ -12,6 +15,7 @@
     using Enum;
     using Extensions;
     using Microsoft.Extensions.Logging;
+    using Ssl;
 
     public class FtpSocketStream : Stream
     {
@@ -20,6 +24,9 @@
         private readonly IDnsResolver dnsResolver;
         private Socket Socket;
         private Stream BaseStream;
+
+        private Stream NetworkStream => SslStream ?? BaseStream;
+        private SslStream SslStream { get; set; }
         private int SocketPollInterval { get; } = 15000;
         private DateTime LastActivity = DateTime.Now;
         public Encoding Encoding { get; set; } = Encoding.ASCII;
@@ -27,22 +34,42 @@
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 1 );
         private readonly SemaphoreSlim receiveSemaphore = new SemaphoreSlim( 1, 1 );
 
+        event FtpSocketStreamSslValidation m_sslvalidate;
+//
+//        /// <summary>
+//        /// Event is fired when a SSL certificate needs to be validated
+//        /// </summary>
+//        public event FtpSocketStreamSslValidation ValidateCertificate
+//        {
+//            add { m_sslvalidate += value; }
+//            remove { m_sslvalidate -= value; }
+//        }
+
         public FtpSocketStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
         {
             Configuration = configuration;
             this.dnsResolver = dnsResolver;
+
+
+//            ValidateCertificate += ( control, e ) =>
+//            {
+//                e.Accept = Configuration.IgnoreCertificateErrors ||
+//                           ( e.PolicyErrors == SslPolicyErrors.None );
+//            };
         }
 
-        public override bool CanRead => BaseStream != null && BaseStream.CanRead;
+        public override bool CanRead => NetworkStream != null && NetworkStream.CanRead;
         public override bool CanSeek => false;
-        public override bool CanWrite => BaseStream != null && BaseStream.CanWrite;
-        public override long Length => BaseStream?.Length ?? 0;
+        public override bool CanWrite => NetworkStream != null && NetworkStream.CanWrite;
+        public override long Length => NetworkStream?.Length ?? 0;
 
         public override long Position
         {
-            get { return BaseStream?.Position ?? 0; }
+            get { return NetworkStream?.Position ?? 0; }
             set { throw new InvalidOperationException(); }
         }
+
+        public bool IsEncrypted => SslStream != null && SslStream.IsEncrypted;
 
         public bool IsConnected
         {
@@ -85,18 +112,18 @@
 
         public override int Read( byte[] buffer, int offset, int count )
         {
-            return BaseStream?.Read( buffer, offset, count ) ?? 0;
+            return NetworkStream?.Read( buffer, offset, count ) ?? 0;
         }
 
 
         public override void Write( byte[] buffer, int offset, int count )
         {
-            BaseStream?.Write( buffer, offset, count );
+            NetworkStream?.Write( buffer, offset, count );
         }
 
         public override async Task WriteAsync( byte[] buffer, int offset, int count, CancellationToken cancellationToken )
         {
-            await BaseStream.WriteAsync( buffer, offset, count, cancellationToken );
+            await NetworkStream.WriteAsync( buffer, offset, count, cancellationToken );
         }
 
         public override long Seek( long offset, SeekOrigin origin )
@@ -110,7 +137,7 @@
             if ( !IsConnected )
                 throw new InvalidOperationException( "The FtpSocketStream object is not connected." );
 
-            BaseStream?.Flush();
+            NetworkStream?.Flush();
         }
 
         public override void SetLength( long value )
@@ -120,23 +147,26 @@
 
         public async Task ConnectAsync( CancellationToken token = default( CancellationToken ) )
         {
-            Logger?.LogDebug( "Connecting" );
-            var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion, token );
+            await ConnectSocketAsync( token );
 
-            Socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
-            {
-                ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-            };
-            Socket.Connect( ipEndpoint );
+            // Throw away welcome message
+            await GetResponseAsync( CancellationToken.None );
 
-            BaseStream = new NetworkStream( Socket );
-            LastActivity = DateTime.Now;
+            if ( !Configuration.ShouldEncrypt )
+                return;
+
+            if ( Configuration.EncryptionType == FtpEncryption.Implicit )
+                await EncryptImplicitly( token );
+
+            if ( Configuration.EncryptionType == FtpEncryption.Explicit )
+                await EncryptExplicitly( token );
         }
+
 
         private async Task WriteLineAsync( string buf )
         {
             var data = Encoding.GetBytes( $"{buf}\r\n" );
-            await WriteAsync( data, 0, data.Length );
+            await WriteAsync( data, 0, data.Length, CancellationToken.None );
         }
 
         private string ReadLine( Encoding encoding )
@@ -205,23 +235,11 @@
                     Logger?.LogWarning( $"Stale data on socket {staleDataResult.ResponseMessage}" );
                 }
 
-//                if ( !IsConnected )
-//                {
-//                    if ( command == FtpCommand.QUIT.ToString() )
-//                    {
-//                        return new FtpResponse
-//                        {
-//                            ResponseMessage = "Connection already closed",
-//                            FtpStatusCode = FtpStatusCode.CommandOK
-//                        };
-//                    }
-//                }
+                string commandToPrint = command.StartsWith( FtpCommand.PASS.ToString() )
+                    ? "PASS *****"
+                    : command;
 
-                Logger?.LogDebug( command.StartsWith( FtpCommand.PASS.ToString() ) 
-                    ? "[FtpClient] Sending command: PASS *****" 
-                    : $"[FtpClient] Sending command: {command}" );
-
-
+                Logger?.LogDebug( $"[FtpClient] Sending command: {commandToPrint}" );
                 await WriteLineAsync( command );
 
                 var response = await GetResponseAsync( token );
@@ -271,6 +289,73 @@
             }
         }
 
+        private async Task ConnectSocketAsync( CancellationToken token )
+        {
+            Logger?.LogDebug( "Connecting" );
+            var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion, token );
+
+            Socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
+            {
+                ReceiveTimeout = Configuration.TimeoutSeconds * 1000
+            };
+            Socket.Connect( ipEndpoint );
+            Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+
+            BaseStream = new NetworkStream( Socket );
+            LastActivity = DateTime.Now;
+        }
+
+        private async Task EncryptImplicitly( CancellationToken token )
+        {
+            await ActivateEncryptionAsync();
+
+            var response = await GetResponseAsync( token );
+            if ( !response.IsSuccess )
+            {
+                throw new IOException( $"Could not securely connect to host {Configuration.Host}:{Configuration.Port}" );
+            }
+        }
+
+        private async Task EncryptExplicitly( CancellationToken token )
+        {
+            var response = await SendCommandAsync( "AUTH TLS", token );
+
+            if ( !response.IsSuccess )
+                throw new InvalidOperationException();
+
+            await ActivateEncryptionAsync();
+        }
+
+        private async Task ActivateEncryptionAsync()
+        {
+            if ( !IsConnected )
+                throw new InvalidOperationException( "The FtpSocketStream object is not connected." );
+
+            if ( BaseStream == null )
+                throw new InvalidOperationException( "The base network stream is null." );
+
+            if ( SslStream != null )
+                throw new InvalidOperationException( "SSL Encryption has already been enabled on this stream." );
+
+            try
+            {
+                SslStream = new SslStream( BaseStream, true, ( sender, certificate, chain, sslPolicyErrors ) => OnValidateCertificate( certificate, chain, sslPolicyErrors ) );
+                await SslStream.AuthenticateAsClientAsync( Configuration.Host, Configuration.ClientCertificates, Configuration.SslProtocols, true );
+            }
+            catch ( AuthenticationException e )
+            {
+                Logger?.LogError( $"Could not activate encryption for the connection: {e.Message}" );
+                throw;
+            }
+        }
+
+        private bool OnValidateCertificate( X509Certificate certificate, X509Chain chain, SslPolicyErrors errors )
+        {
+            if ( Configuration.IgnoreCertificateErrors )
+                return true;
+
+            return errors == SslPolicyErrors.None;
+        }
 
         public void Disconnect()
         {

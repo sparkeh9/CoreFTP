@@ -14,7 +14,6 @@
     {
         public static FtpConfiguration FtpConfiguration;
         public static ILoggerFactory LoggerFactory;
-        public static bool Initialised = false;
 
         public static void Main( string[] args )
         {
@@ -23,12 +22,6 @@
 
         public static void Initialise( ITestOutputHelper outputHelper = null )
         {
-            if ( !Initialised )
-            {
-                Console.WriteLine( "not Initialised" );
-//                return;
-            }
-            Initialised = true;
             LoggerFactory = new LoggerFactory()
                 .AddXunitConsole( outputHelper )
                 .AddDebug( LogLevel.Debug );
