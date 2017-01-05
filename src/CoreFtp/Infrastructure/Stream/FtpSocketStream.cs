@@ -15,47 +15,29 @@
     using Enum;
     using Extensions;
     using Microsoft.Extensions.Logging;
-    using Ssl;
 
     public class FtpSocketStream : Stream
     {
-        private readonly FtpClientConfiguration Configuration;
+        protected readonly FtpClientConfiguration Configuration;
         public ILogger Logger;
-        private readonly IDnsResolver dnsResolver;
-        private Socket Socket;
-        private Stream BaseStream;
+        protected readonly IDnsResolver dnsResolver;
+        protected Socket Socket;
+        protected Stream BaseStream;
 
-        private Stream NetworkStream => SslStream ?? BaseStream;
-        private SslStream SslStream { get; set; }
-        private int SocketPollInterval { get; } = 15000;
-        private DateTime LastActivity = DateTime.Now;
+        protected Stream NetworkStream => SslStream ?? BaseStream;
+        protected SslStream SslStream { get; set; }
+        protected int SocketPollInterval { get; } = 15000;
+        protected DateTime LastActivity = DateTime.Now;
         public Encoding Encoding { get; set; } = Encoding.ASCII;
 
-        private readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 1 );
-        private readonly SemaphoreSlim receiveSemaphore = new SemaphoreSlim( 1, 1 );
+        protected readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 1 );
+        protected readonly SemaphoreSlim receiveSemaphore = new SemaphoreSlim( 1, 1 );
 
-        event FtpSocketStreamSslValidation m_sslvalidate;
-//
-//        /// <summary>
-//        /// Event is fired when a SSL certificate needs to be validated
-//        /// </summary>
-//        public event FtpSocketStreamSslValidation ValidateCertificate
-//        {
-//            add { m_sslvalidate += value; }
-//            remove { m_sslvalidate -= value; }
-//        }
 
         public FtpSocketStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
         {
             Configuration = configuration;
             this.dnsResolver = dnsResolver;
-
-
-//            ValidateCertificate += ( control, e ) =>
-//            {
-//                e.Accept = Configuration.IgnoreCertificateErrors ||
-//                           ( e.PolicyErrors == SslPolicyErrors.None );
-//            };
         }
 
         public override bool CanRead => NetworkStream != null && NetworkStream.CanRead;
@@ -147,7 +129,7 @@
 
         public async Task ConnectAsync( CancellationToken token = default( CancellationToken ) )
         {
-            await ConnectSocketAsync( token );
+            await ConnectStreamAsync( token );
 
             if ( SocketDataAvailable() )
             {
@@ -166,13 +148,13 @@
         }
 
 
-        private async Task WriteLineAsync( string buf )
+        protected async Task WriteLineAsync( string buf )
         {
             var data = Encoding.GetBytes( $"{buf}\r\n" );
             await WriteAsync( data, 0, data.Length, CancellationToken.None );
         }
 
-        private string ReadLine( Encoding encoding )
+        protected string ReadLine( Encoding encoding )
         {
             if ( encoding == null )
                 throw new ArgumentNullException( nameof( encoding ) );
@@ -254,7 +236,6 @@
             }
         }
 
-
         public async Task<FtpResponse> GetResponseAsync( CancellationToken token = default( CancellationToken ) )
         {
             Logger?.LogDebug( "Getting Response" );
@@ -274,13 +255,13 @@
                     Logger?.LogDebug( line );
                     data.Add( line );
 
-                    Match m;
+                    Match match;
 
-                    if ( !( m = Regex.Match( line, "^(?<statusCode>[0-9]{3}) (?<message>.*)$" ) ).Success )
+                    if ( !( match = Regex.Match( line, "^(?<statusCode>[0-9]{3}) (?<message>.*)$" ) ).Success )
                         continue;
 
-                    response.FtpStatusCode = m.Groups[ "statusCode" ].Value.ToStatusCode();
-                    response.ResponseMessage = m.Groups[ "message" ].Value;
+                    response.FtpStatusCode = match.Groups[ "statusCode" ].Value.ToStatusCode();
+                    response.ResponseMessage = match.Groups[ "message" ].Value;
                     break;
                 }
                 response.Data = data.ToArray();
@@ -292,23 +273,48 @@
             }
         }
 
-        private async Task ConnectSocketAsync( CancellationToken token )
+        public async Task<Stream> OpenDataStreamAsync( string host, int port, CancellationToken token )
+        {
+            var socketStream = new FtpSocketStream( Configuration, dnsResolver );
+            await socketStream.ConnectStreamAsync( host, port, token );
+
+            if ( IsEncrypted )
+            {
+                await socketStream.ActivateEncryptionAsync();
+            }
+            return socketStream;
+        }
+
+        protected async Task ConnectStreamAsync( CancellationToken token )
+        {
+            await ConnectStreamAsync( Configuration.Host, Configuration.Port, token );
+        }
+
+        protected async Task ConnectStreamAsync( string host, int port, CancellationToken token )
         {
             Logger?.LogDebug( "Connecting" );
-            var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion, token );
-
-            Socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
-            {
-                ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-            };
-            Socket.Connect( ipEndpoint );
-            Socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+            Socket = await ConnectSocketAsync( host, port, token );
 
             BaseStream = new NetworkStream( Socket );
             LastActivity = DateTime.Now;
         }
 
-        private async Task EncryptImplicitly( CancellationToken token )
+
+        protected async Task<Socket> ConnectSocketAsync( string host, int port, CancellationToken token )
+        {
+            Logger?.LogDebug( "Connecting" );
+            var ipEndpoint = await dnsResolver.ResolveAsync( host, port, Configuration.IpVersion, token );
+
+            var socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
+            {
+                ReceiveTimeout = Configuration.TimeoutSeconds * 1000
+            };
+            socket.Connect( ipEndpoint );
+            socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+            return socket;
+        }
+
+        protected async Task EncryptImplicitly( CancellationToken token )
         {
             await ActivateEncryptionAsync();
 
@@ -319,7 +325,7 @@
             }
         }
 
-        private async Task EncryptExplicitly( CancellationToken token )
+        protected async Task EncryptExplicitly( CancellationToken token )
         {
             var response = await SendCommandAsync( "AUTH TLS", token );
 
@@ -329,7 +335,7 @@
             await ActivateEncryptionAsync();
         }
 
-        private async Task ActivateEncryptionAsync()
+        protected async Task ActivateEncryptionAsync()
         {
             if ( !IsConnected )
                 throw new InvalidOperationException( "The FtpSocketStream object is not connected." );
@@ -352,7 +358,7 @@
             }
         }
 
-        private bool OnValidateCertificate( X509Certificate certificate, X509Chain chain, SslPolicyErrors errors )
+        protected bool OnValidateCertificate( X509Certificate certificate, X509Chain chain, SslPolicyErrors errors )
         {
             if ( Configuration.IgnoreCertificateErrors )
                 return true;

@@ -24,6 +24,7 @@
         private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
         private ILogger _logger;
+        private Stream dataStream;
         public FtpClientConfiguration Configuration { get; }
 
         public ILogger Logger
@@ -89,7 +90,7 @@
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
 
-            if ( SocketStream.IsEncrypted && Configuration.EncryptionType == FtpEncryption.Explicit )
+            if ( SocketStream.IsEncrypted )
             {
                 await SocketStream.SendCommandAsync( new FtpCommandEnvelope
                 {
@@ -338,6 +339,7 @@
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
 
             dataSocket.Shutdown( SocketShutdown.Both );
+            dataStream.Dispose();
 
             await SocketStream.GetResponseAsync();
         }
@@ -533,7 +535,8 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Opening filestream for {fileName}, {command}" );
-            dataSocket = await ConnectDataSocketAsync();
+
+            dataStream = await ConnectDataStreamAsync();
 
             var retrResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
@@ -546,7 +549,7 @@
                  ( retrResponse.FtpStatusCode != FtpStatusCode.ClosingData ) )
                 throw new FtpException( retrResponse.ResponseMessage );
 
-            return new NetworkStream( dataSocket );
+            return dataStream;
         }
 
         /// <summary>
@@ -556,6 +559,25 @@
         {
             if ( !IsConnected || !IsAuthenticated )
                 throw new FtpException( "User must be logged in" );
+        }
+
+        /// <summary>
+        /// Produces a data socket using Extended Passive mode
+        /// </summary>
+        /// <returns></returns>
+        internal async Task<Stream> ConnectDataStreamAsync()
+        {
+            Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
+            var epsvResult = await SocketStream.SendCommandAsync( FtpCommand.EPSV );
+
+            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
+                throw new FtpException( epsvResult.ResponseMessage );
+
+            var passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
+            if ( !passivePortNumber.HasValue )
+                throw new FtpException( "Could not detmine EPSV data port" );
+
+            return await SocketStream.OpenDataStreamAsync( Configuration.Host, passivePortNumber.Value, CancellationToken.None );
         }
 
         /// <summary>
@@ -621,7 +643,6 @@
             Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
             commandSemaphore.Release();
             SocketStream.Dispose();
-            //            commandSocket?.Dispose();
             dataSocket?.Dispose();
         }
     }

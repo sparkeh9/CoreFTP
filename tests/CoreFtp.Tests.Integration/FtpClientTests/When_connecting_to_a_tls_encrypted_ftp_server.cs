@@ -1,11 +1,8 @@
 namespace CoreFtp.Tests.Integration.FtpClientTests
 {
-    using System;
-    using System.Linq;
     using System.Threading.Tasks;
     using Enum;
     using FluentAssertions;
-    using Helpers;
     using Xunit;
     using Xunit.Abstractions;
 
