@@ -383,5 +383,11 @@
                 BaseStream = null;
             }
         }
+
+        protected override void Dispose( bool disposing )
+        {
+            Disconnect();
+            base.Dispose( disposing );
+        }
     }
 }
