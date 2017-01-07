@@ -5,6 +5,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using System.Threading.Tasks;
     using FluentAssertions;
     using Helpers;
+    using Microsoft.Extensions.Logging;
     using Xunit;
     using Xunit.Abstractions;
 
@@ -28,16 +29,20 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 await sut.LoginAsync();
                 var fileinfo = ResourceHelpers.GetResourceFileInfo( "penguin.jpg" );
 
+                Logger.LogDebug( "Writing the file" );
                 using ( var writeStream = await sut.OpenFileWriteStreamAsync( randomFileName ) )
                 {
                     var fileReadStream = fileinfo.OpenRead();
                     await fileReadStream.CopyToAsync( writeStream );
                 }
 
+                Logger.LogDebug("Listing the directory");
                 ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeTrue();
 
+                Logger.LogDebug("Deleting the file");
                 await sut.DeleteFileAsync( randomFileName );
 
+                Logger.LogDebug("Listing the firector");
                 ( await sut.ListFilesAsync() ).Any( x => x.Name == randomFileName ).Should().BeFalse();
             }
         }

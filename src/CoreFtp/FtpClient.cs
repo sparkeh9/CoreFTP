@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Diagnostics;
     using System.IO;
     using System.Linq;
     using System.Net.Sockets;
@@ -39,7 +40,7 @@
 
         internal IEnumerable<string> Features { get; private set; }
         internal FtpSocketStream SocketStream { get; set; }
-        internal Socket dataSocket { get; set; }
+//        internal Socket dataSocket { get; set; }
         public bool IsConnected => SocketStream != null && SocketStream.IsConnected;
         public bool IsEncrypted => SocketStream != null && SocketStream.IsEncrypted;
         public bool IsAuthenticated { get; private set; }
@@ -322,7 +323,9 @@
         {
             string filePath = WorkingDirectory.CombineAsUriWith( fileName );
             Logger?.LogDebug( $"[FtpClient] Opening file read stream for {filePath}" );
-            var segments = filePath.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
+            var segments = filePath.Split( '/' )
+                                   .Where( x => !x.IsNullOrWhiteSpace() )
+                                   .ToList();
             await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray(), filePath.StartsWith( "/" ) );
             return new FtpWriteFileStream( await OpenFileStreamAsync( filePath, FtpCommand.STOR ), this, Logger );
         }
@@ -333,13 +336,14 @@
         /// <returns></returns>
         public async Task CloseFileWriteStreamAsync()
         {
-            if ( !dataSocket.Connected )
-                return;
+//            if ( !dataSocket.Connected )
+//                return;
 
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
 
-            dataSocket.Shutdown( SocketShutdown.Both );
+//            dataSocket.Shutdown( SocketShutdown.Both );
             dataStream.Dispose();
+            dataStream = null;
 
             await SocketStream.GetResponseAsync();
         }
@@ -535,7 +539,6 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Opening filestream for {fileName}, {command}" );
-
             dataStream = await ConnectDataStreamAsync();
 
             var retrResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
@@ -639,11 +642,11 @@
 
         public void Dispose()
         {
-            Logger?.LogDebug( "Disposing of resources" );
+            Logger?.LogDebug( "Disposing of FtpClient" );
             Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
             commandSemaphore.Release();
             SocketStream.Dispose();
-            dataSocket?.Dispose();
+//            dataSocket?.Dispose();
         }
     }
 }

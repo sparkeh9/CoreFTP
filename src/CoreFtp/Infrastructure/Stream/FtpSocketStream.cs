@@ -33,9 +33,11 @@
         protected readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 1 );
         protected readonly SemaphoreSlim receiveSemaphore = new SemaphoreSlim( 1, 1 );
 
+        internal bool IsCloned { get; set; }
 
         public FtpSocketStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
         {
+            Logger?.LogDebug( "Constructing new FtpSocketStream" );
             Configuration = configuration;
             this.dnsResolver = dnsResolver;
         }
@@ -275,7 +277,8 @@
 
         public async Task<Stream> OpenDataStreamAsync( string host, int port, CancellationToken token )
         {
-            var socketStream = new FtpSocketStream( Configuration, dnsResolver );
+            Logger?.LogDebug( "[FtpSocketStream] Opening datastream" );
+            var socketStream = new FtpSocketStream( Configuration, dnsResolver ) { Logger = Logger, IsCloned = true };
             await socketStream.ConnectStreamAsync( host, port, token );
 
             if ( IsEncrypted )
@@ -292,7 +295,7 @@
 
         protected async Task ConnectStreamAsync( string host, int port, CancellationToken token )
         {
-            Logger?.LogDebug( "Connecting" );
+            Logger?.LogDebug( $"Connecting stream on {host}:{port}" );
             Socket = await ConnectSocketAsync( host, port, token );
 
             BaseStream = new NetworkStream( Socket );
@@ -302,16 +305,24 @@
 
         protected async Task<Socket> ConnectSocketAsync( string host, int port, CancellationToken token )
         {
-            Logger?.LogDebug( "Connecting" );
-            var ipEndpoint = await dnsResolver.ResolveAsync( host, port, Configuration.IpVersion, token );
-
-            var socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
+            try
             {
-                ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-            };
-            socket.Connect( ipEndpoint );
-            socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
-            return socket;
+                Logger?.LogDebug( "Connecting" );
+                var ipEndpoint = await dnsResolver.ResolveAsync( host, port, Configuration.IpVersion, token );
+
+                var socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
+                {
+                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
+                };
+                socket.Connect( ipEndpoint );
+                socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+                return socket;
+            }
+            catch ( Exception exception )
+            {
+                Logger?.LogError( $"Could not to connect socket {host}:{port} - {exception.Message}", exception );
+                throw;
+            }
         }
 
         protected async Task EncryptImplicitly( CancellationToken token )
@@ -368,6 +379,7 @@
 
         public void Disconnect()
         {
+            Logger?.LogDebug( "Disconnecting" );
             try
             {
                 Socket?.Shutdown( SocketShutdown.Both );
@@ -386,7 +398,19 @@
 
         protected override void Dispose( bool disposing )
         {
-            Disconnect();
+            if ( IsCloned )
+            {
+                Logger?.LogDebug( "Disposing of data connection" );
+            }
+            else
+            {
+                Logger?.LogDebug( "Disposing of control connection" );
+            }
+
+            if ( disposing )
+            {
+                Disconnect();
+            }
             base.Dispose( disposing );
         }
     }

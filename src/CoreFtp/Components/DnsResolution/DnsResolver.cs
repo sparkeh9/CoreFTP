@@ -91,7 +91,7 @@
 
                 return ipEndpoint;
             }
-            catch ( Exception )
+            catch ( Exception e)
             {
                 return null;
             }

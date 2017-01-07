@@ -26,7 +26,6 @@
         public FtpWriteFileStream( Stream encapsulatedStream, FtpClient client, ILogger logger )
         {
             Logger = logger;
-            Logger?.LogDebug( "[FtpWriteFileStream] Constructing" );
             this.encapsulatedStream = encapsulatedStream;
             this.client = client;
         }
@@ -37,8 +36,9 @@
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            Task.WaitAny( client.CloseFileWriteStreamAsync(), Task.Delay( 5000 ) );
+            Task.WaitAny( client.CloseFileWriteStreamAsync() );
         }
+
 
         public override async Task FlushAsync( CancellationToken cancellationToken )
         {
@@ -54,7 +54,7 @@
 
         public override async Task WriteAsync( byte[] buffer, int offset, int count, CancellationToken cancellationToken )
         {
-            Logger?.LogDebug( "[FtpWriteFileStream] WriteAsync" );
+            Logger?.LogDebug( $"[FtpWriteFileStream] WriteAsync" );
             await encapsulatedStream.WriteAsync( buffer, offset, count, cancellationToken );
         }
 

@@ -21,7 +21,7 @@
         {
             var sut = new DnsResolver();
 
-            var endpoint = await sut.ResolveAsync( ipAddress, 21);
+            var endpoint = await sut.ResolveAsync( ipAddress, 21 );
             endpoint.Should().BeOfType<IPEndPoint>();
         }
 
@@ -29,7 +29,6 @@
         [ InlineData( "localhost", "127.0.0.1", IpVersion.IpV4, AddressFamily.InterNetwork ) ]
         [ InlineData( "localhost", "::1", IpVersion.IpV6, AddressFamily.InterNetworkV6 ) ]
         [ InlineData( "google-public-dns-a.google.com", "8.8.8.8", IpVersion.IpV4, AddressFamily.InterNetwork ) ]
-        [ InlineData( "resolver1.ipv6-sandbox.opendns.com", "2620:0:ccc::2", IpVersion.IpV6, AddressFamily.InterNetworkV6 ) ]
         public async Task Should_return_ip_endpoint_when_given_hostname( string hostname, string expectedIpAddress, IpVersion ipVersion, AddressFamily addressFamily )
         {
             var sut = new DnsResolver();
