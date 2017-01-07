@@ -3,10 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
-    using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using System.Net.Sockets;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -20,12 +18,10 @@
 
     public class FtpClient : IDisposable
     {
-        private readonly SemaphoreSlim commandSemaphore = new SemaphoreSlim( 1, 2 );
-
-        private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
         private ILogger _logger;
         private Stream dataStream;
+        internal readonly SemaphoreSlim dataSocketSemaphore = new SemaphoreSlim( 1, 1 );
         public FtpClientConfiguration Configuration { get; }
 
         public ILogger Logger
@@ -39,8 +35,7 @@
         }
 
         internal IEnumerable<string> Features { get; private set; }
-        internal FtpSocketStream SocketStream { get; set; }
-//        internal Socket dataSocket { get; set; }
+        internal FtpSocketStream SocketStream { get; }
         public bool IsConnected => SocketStream != null && SocketStream.IsConnected;
         public bool IsEncrypted => SocketStream != null && SocketStream.IsEncrypted;
         public bool IsAuthenticated { get; private set; }
@@ -53,8 +48,7 @@
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
 
-            dnsResolver = new DnsResolver();
-            SocketStream = new FtpSocketStream( Configuration, dnsResolver );
+            SocketStream = new FtpSocketStream( Configuration, new DnsResolver() );
 
             Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
@@ -107,12 +101,12 @@
             }
 
             Features = await DetermineFeaturesAsync();
-            if ( SocketStream.Encoding == Encoding.ASCII && Features.Any( x => x == Constants.UTF8 ) )
+            if ( Equals( SocketStream.Encoding, Encoding.ASCII ) && Features.Any( x => x == Constants.UTF8 ) )
             {
                 SocketStream.Encoding = Encoding.UTF8;
             }
 
-            if ( SocketStream.Encoding == Encoding.UTF8 )
+            if ( Equals( SocketStream.Encoding, Encoding.UTF8 ) )
             {
                 // If the server supports UTF8 it should already be enabled and this
                 // command should not matter however there are conflicting drafts
@@ -336,14 +330,9 @@
         /// <returns></returns>
         public async Task CloseFileWriteStreamAsync()
         {
-//            if ( !dataSocket.Connected )
-//                return;
-
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
 
-//            dataSocket.Shutdown( SocketShutdown.Both );
             dataStream.Dispose();
-            dataStream = null;
 
             await SocketStream.GetResponseAsync();
         }
@@ -445,6 +434,10 @@
             return fileSize;
         }
 
+        /// <summary>
+        /// Determines the type of directory listing the FTP server will return, and set the appropriate parser
+        /// </summary>
+        /// <returns></returns>
         private IDirectoryProvider DetermineDirectoryProvider()
         {
             Logger?.LogDebug( "[FtpClient] Determining directory provider" );
@@ -584,46 +577,6 @@
         }
 
         /// <summary>
-        /// Produces a data socket using Extended Passive mode
-        /// </summary>
-        /// <returns></returns>
-        internal async Task<Socket> ConnectDataSocketAsync()
-        {
-            Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
-            var epsvResult = await SocketStream.SendCommandAsync( FtpCommand.EPSV );
-
-            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
-                throw new FtpException( epsvResult.ResponseMessage );
-
-            var passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
-            if ( !passivePortNumber.HasValue )
-                throw new FtpException( "Could not detmine EPSV data port" );
-
-
-            Socket socket = null;
-            try
-            {
-                Logger?.LogDebug( $"Connecting data socket, {Configuration.Host}:{passivePortNumber.Value}" );
-
-                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, passivePortNumber.Value, Configuration.IpVersion );
-
-                socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
-                {
-                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-                };
-                socket.Connect( ipEndpoint );
-
-                return socket;
-            }
-            catch ( Exception ex )
-            {
-                if ( socket != null && socket.Connected )
-                    socket.Shutdown( SocketShutdown.Both );
-                throw new FtpException( "Can't connect to remote server", ex );
-            }
-        }
-
-        /// <summary>
         /// Throws an exception if the server response is not one of the given acceptable codes
         /// </summary>
         /// <param name="response"></param>
@@ -644,9 +597,7 @@
         {
             Logger?.LogDebug( "Disposing of FtpClient" );
             Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
-            commandSemaphore.Release();
             SocketStream.Dispose();
-//            dataSocket?.Dispose();
         }
     }
 }

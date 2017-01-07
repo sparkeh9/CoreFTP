@@ -2,6 +2,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 {
     using System;
     using System.Threading.Tasks;
+    using Enum;
     using FluentAssertions;
     using Helpers;
     using Infrastructure;
@@ -12,16 +13,23 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     {
         public When_getting_the_size_of_a_file( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_give_size()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_give_size( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 string randomFilename = $"{Guid.NewGuid()}.jpg";
@@ -36,16 +44,23 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
             }
         }
 
-        [ Fact ]
-        public async Task Should_throw_exception_when_file_nonexistent()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_throw_exception_when_file_nonexistent( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();

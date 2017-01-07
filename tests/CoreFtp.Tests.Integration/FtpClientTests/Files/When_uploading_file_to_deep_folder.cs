@@ -3,6 +3,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using System;
     using System.Linq;
     using System.Threading.Tasks;
+    using Enum;
     using FluentAssertions;
     using Helpers;
     using Xunit;
@@ -10,10 +11,13 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
 
     public class When_uploading_file_to_deep_folder : TestBase
     {
-        public When_uploading_file_to_deep_folder(ITestOutputHelper outputHelper) : base(outputHelper) { }
+        public When_uploading_file_to_deep_folder( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_recurse_as_appropriate_to_create_file()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_recurse_as_appropriate_to_create_file( FtpEncryption encryption )
         {
             string[] randomDirectoryNames =
             {
@@ -23,12 +27,16 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
             string joinedPath = string.Join( "/", randomDirectoryNames );
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
 

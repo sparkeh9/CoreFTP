@@ -5,22 +5,30 @@
     using FluentAssertions;
     using Xunit;
     using System.Linq;
+    using Enum;
     using Xunit.Abstractions;
 
     public class When_listing_directories : TestBase
     {
         public When_listing_directories( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_list_directories_in_root()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_list_directories_in_root( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
 
@@ -36,8 +44,11 @@
             }
         }
 
-        [ Fact ]
-        public async Task Should_list_directories_in_subdirectory()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_list_directories_in_subdirectory( FtpEncryption encryption )
         {
             string[] randomDirectoryNames =
             {
@@ -45,12 +56,16 @@
                 Guid.NewGuid().ToString()
             };
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
 

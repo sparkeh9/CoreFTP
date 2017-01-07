@@ -3,6 +3,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     using System;
     using System.Linq;
     using System.Threading.Tasks;
+    using Enum;
     using FluentAssertions;
     using Helpers;
     using Xunit;
@@ -13,15 +14,22 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
     {
         public When_uploading_a_file( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_upload_file()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_upload_file( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
             {
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
             } ) )
             {
                 sut.Logger = Logger;
@@ -46,15 +54,22 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
             }
         }
 
-        [ Fact ]
-        public async Task Should_upload_file_to_subdirectory()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_upload_file_to_subdirectory( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
             {
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
             } ) )
             {
                 sut.Logger = Logger;
@@ -82,8 +97,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
             }
         }
 
-        [ Fact ]
-        public async Task Should_upload_file_to_subdirectory_when_given_as_basepath()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_upload_file_to_subdirectory_when_given_as_basepath( FtpEncryption encryption )
         {
             var guid = Guid.NewGuid();
             using ( var sut = new FtpClient( new FtpClientConfiguration
@@ -91,7 +109,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Files
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true,
                 BaseDirectory = $"{guid}/abc/123/doraeme"
             } ) )
             {

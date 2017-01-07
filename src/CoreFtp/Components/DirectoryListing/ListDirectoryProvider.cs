@@ -34,17 +34,41 @@
 
         public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
         {
-            return await ListNodesAsync();
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync();
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
         public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            return await ListNodesAsync( FtpNodeType.File );
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync( FtpNodeType.File );
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
         public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            return await ListNodesAsync( FtpNodeType.Directory );
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync( FtpNodeType.Directory );
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
         /// <summary>
