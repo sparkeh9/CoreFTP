@@ -8,17 +8,24 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     public class When_changing_transfer_type : TestBase
     {
         public When_changing_transfer_type( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
-        
-        [ Fact ]
-        public async Task Should_set_as_ascii_with_and_without_second_type()
+
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_set_as_ascii_with_and_without_second_type( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();
@@ -28,16 +35,23 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
             }
         }
 
-        [ Fact ]
-        public async Task Should_set_as_binary()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_set_as_binary( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();

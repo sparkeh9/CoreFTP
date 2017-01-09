@@ -1,10 +1,7 @@
 ﻿namespace CoreFtp.Components.DirectoryListing
 {
-    using System;
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
-    using System.Net.Sockets;
-    using System.Text;
     using System.Threading.Tasks;
     using Enum;
     using Infrastructure;
@@ -12,11 +9,8 @@
     using Microsoft.Extensions.Logging;
     using Parser;
 
-    internal class ListDirectoryProvider : IDirectoryProvider
+    internal class ListDirectoryProvider : DirectoryProviderBase
     {
-        private readonly FtpClient ftpClient;
-        private readonly ILogger logger;
-        private readonly FtpClientConfiguration configuration;
         private readonly List<IListDirectoryParser> directoryParsers;
 
         public ListDirectoryProvider( FtpClient ftpClient, ILogger logger, FtpClientConfiguration configuration )
@@ -38,19 +32,43 @@
                 throw new FtpException( "User must be logged in" );
         }
 
-        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
+        public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
         {
-            return await ListNodesAsync();
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync();
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
-        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
+        public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            return await ListNodesAsync( FtpNodeType.File );
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync( FtpNodeType.File );
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
-        public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
+        public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            return await ListNodesAsync( FtpNodeType.Directory );
+            try
+            {
+                await ftpClient.dataSocketSemaphore.WaitAsync();
+                return await ListNodesAsync( FtpNodeType.Directory );
+            }
+            finally
+            {
+                ftpClient.dataSocketSemaphore.Release();
+            }
         }
 
         /// <summary>
@@ -62,26 +80,31 @@
         {
             EnsureLoggedIn();
             logger?.LogDebug( $"[ListDirectoryProvider] Listing {ftpNodeType}" );
-            ftpClient.dataSocket = await ftpClient.ConnectDataSocketAsync();
 
-            if ( ftpClient.dataSocket == null )
-                throw new FtpException( "Could not establish a data connection" );
+            try
+            {
+                stream = await ftpClient.ConnectDataStreamAsync();
 
-            var result = await ftpClient.SendCommandAsync( new FtpCommandEnvelope
-                                                           {
-                                                               FtpCommand = FtpCommand.LIST
-                                                           } );
+                var result = await ftpClient.SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.LIST
+                } );
 
-            if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
-                throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
+                if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
+                    throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
 
-            var directoryListing = await RetrieveDirectoryListingAsync();
+                var directoryListing = RetrieveDirectoryListing();
 
-            var nodes = ParseLines( directoryListing )
-                .Where( x => !ftpNodeType.HasValue || x.NodeType == ftpNodeType )
-                .ToList();
+                var nodes = ParseLines( directoryListing.ToList().AsReadOnly() )
+                    .Where( x => !ftpNodeType.HasValue || x.NodeType == ftpNodeType )
+                    .ToList();
 
-            return nodes.AsReadOnly();
+                return nodes.AsReadOnly();
+            }
+            finally
+            {
+                stream.Dispose();
+            }
         }
 
         private IEnumerable<FtpNodeInformation> ParseLines( IReadOnlyList<string> lines )
@@ -101,39 +124,6 @@
                 if ( parsed != null )
                     yield return parsed;
             }
-        }
-
-        private async Task<string[]> RetrieveDirectoryListingAsync()
-        {
-            var maxTime = DateTime.Now.AddSeconds( configuration.TimeoutSeconds );
-            bool hasTimedOut;
-
-            var rawResult = new StringBuilder();
-
-            do
-            {
-                var buffer = new byte[Constants.BUFFER_SIZE];
-
-                int byteCount = ftpClient.dataSocket.Receive( buffer, buffer.Length, 0 );
-                if ( byteCount == 0 ) break;
-
-                rawResult.Append(ftpClient.Encoding.GetString( buffer, 0, byteCount ) );
-
-                hasTimedOut = ( configuration.TimeoutSeconds == 0 ) || ( DateTime.Now < maxTime );
-            } while ( hasTimedOut );
-
-            var lines = rawResult.Replace( Constants.CARRIAGE_RETURN, string.Empty )
-                                 .ToString()
-                                 .Split( Constants.LINEFEED );
-
-            if ( logger != null )
-                foreach ( string line in lines )
-                    logger?.LogDebug( line );
-
-            ftpClient.dataSocket.Shutdown( SocketShutdown.Both );
-
-            await ftpClient.GetResponseAsync();
-            return lines;
         }
     }
 }

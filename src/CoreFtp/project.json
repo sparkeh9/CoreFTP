@@ -1,6 +1,6 @@
 {
     "title": "CoreFTP",
-    "version": "1.2.0-*",
+    "version": "1.3.0-*",
     "copyright": "Nick Briscoe 2016",
     "language": "en",
     "packOptions": {
@@ -25,7 +25,8 @@
                 "NETStandard.Library": "1.6.0",
                 "System.Net.NameResolution": "4.0.0",
                 "System.Reflection.TypeExtensions": "4.1.0",
-                "System.Threading.Tasks": "4.0.11"
+                "System.Threading.Tasks": "4.0.11",
+                "System.Net.Security": "4.3.0"
             }
         },
         "net452": {

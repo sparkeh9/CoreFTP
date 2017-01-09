@@ -5,7 +5,6 @@
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
-    using System.Net.Sockets;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -14,32 +13,43 @@
     using Enum;
     using Infrastructure;
     using Infrastructure.Extensions;
+    using Infrastructure.Stream;
     using Microsoft.Extensions.Logging;
 
     public class FtpClient : IDisposable
     {
-        private readonly SemaphoreSlim commandSemaphore = new SemaphoreSlim( 1, 2 );
-
-        private readonly IDnsResolver dnsResolver;
         private IDirectoryProvider directoryProvider;
+        private ILogger logger;
+        private Stream dataStream;
+        internal readonly SemaphoreSlim dataSocketSemaphore = new SemaphoreSlim( 1, 1 );
         public FtpClientConfiguration Configuration { get; }
-        public ILogger Logger { get; set; }
-        internal IEnumerable<string> Features { get; set; }
-        internal Socket commandSocket { get; set; }
-        internal Socket dataSocket { get; set; }
-        public bool IsConnected => ( commandSocket != null ) && commandSocket.Connected;
-        public bool IsAuthenticated { get; set; }
-        public string WorkingDirectory { get; set; } = "/";
-        public Encoding Encoding { get; set; } = Encoding.ASCII;
+
+        internal IEnumerable<string> Features { get; private set; }
+        internal FtpSocketStream SocketStream { get; }
+        public bool IsConnected => SocketStream != null && SocketStream.IsConnected;
+        public bool IsEncrypted => SocketStream != null && SocketStream.IsEncrypted;
+        public bool IsAuthenticated { get; private set; }
+        public string WorkingDirectory { get; private set; } = "/";
+
+        public ILogger Logger
+        {
+            private get { return logger; }
+            set
+            {
+                logger = value;
+                SocketStream.Logger = value;
+            }
+        }
 
         public FtpClient( FtpClientConfiguration configuration )
         {
-            this.Configuration = configuration;
+            Configuration = configuration;
 
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
 
-            dnsResolver = new DnsResolver();
+            SocketStream = new FtpSocketStream( Configuration, new DnsResolver() );
+            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
 
         /// <summary>
@@ -51,22 +61,21 @@
             if ( IsConnected )
                 await LogOutAsync();
 
-            Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
+            string username = Configuration.Username.IsNullOrWhiteSpace()
+                ? Constants.ANONYMOUS_USER
+                : Configuration.Username;
 
-            string username = Configuration.Username.IsNullOrWhiteSpace() ? Constants.ANONYMOUS_USER : Configuration.Username;
+            await SocketStream.ConnectAsync();
 
-            Logger?.LogDebug( $"[FtpClient] Logging In {username}" );
-
-            await ConnectCommandSocketAsync();
-            var usrResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var usrResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.USER,
                 Data = username
             } );
 
-            await BailIfResponseNotAsync( usrResponse, FtpStatusCode.SendPasswordCommand, FtpStatusCode.LoggedInProceed );
+            await BailIfResponseNotAsync( usrResponse, FtpStatusCode.SendUserCommand, FtpStatusCode.SendPasswordCommand, FtpStatusCode.LoggedInProceed );
 
-            var passResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var passResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.PASS,
                 Data = username != Constants.ANONYMOUS_USER ? Configuration.Password : string.Empty
@@ -75,42 +84,46 @@
             await BailIfResponseNotAsync( passResponse, FtpStatusCode.LoggedInProceed );
             IsAuthenticated = true;
 
+            if ( SocketStream.IsEncrypted )
+            {
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.PBSZ,
+                    Data = "0"
+                } );
+
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.PROT,
+                    Data = "P"
+                } );
+            }
+
             Features = await DetermineFeaturesAsync();
-            if (Encoding == Encoding.ASCII && Features.Any(x => x == Constants.UTF8))
-            {
-                Encoding = Encoding.UTF8;
-            }
-
-            if (Encoding == Encoding.UTF8)
-            {
-                // If the server supports UTF8 it should already be enabled and this
-                // command should not matter however there are conflicting drafts
-                // about this so we'll just execute it to be safe. 
-                await SendCommandAsync("OPTS UTF8 ON");
-            }
-
+            directoryProvider = DetermineDirectoryProvider();
+            await EnableUTF8IfPossible();
             await SetTransferMode( Configuration.Mode, Configuration.ModeSecondType );
 
             if ( Configuration.BaseDirectory != "/" )
+            {
                 await CreateDirectoryAsync( Configuration.BaseDirectory );
+            }
 
             await ChangeWorkingDirectoryAsync( Configuration.BaseDirectory );
-
-            directoryProvider = DetermineDirectoryProvider();
         }
-
 
         /// <summary>
         ///     Attemps to log the user out asynchronously, sends the QUIT command and terminates the command socket.
         /// </summary>
         public async Task LogOutAsync()
         {
+            await IgnoreStaleData();
             Logger?.LogDebug( "[FtpClient] Logging out" );
             if ( !IsConnected )
                 return;
 
-            await SendCommandAsync( FtpCommand.QUIT );
-            commandSocket.Shutdown( SocketShutdown.Both );
+            await SocketStream.SendCommandAsync( FtpCommand.QUIT );
+            SocketStream.Disconnect();
             IsAuthenticated = false;
         }
 
@@ -127,18 +140,18 @@
 
             EnsureLoggedIn();
 
-            var response = await SendCommandAsync( new FtpCommandEnvelope
+            var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.CWD,
                 Data = directory
             } );
 
-            if ( response.FtpStatusCode != FtpStatusCode.FileActionOK )
+            if ( !response.IsSuccess )
                 throw new FtpException( response.ResponseMessage );
 
-            var pwdResponse = await SendCommandAsync( FtpCommand.PWD );
+            var pwdResponse = await SocketStream.SendCommandAsync( FtpCommand.PWD );
 
-            if ( pwdResponse.FtpStatusCode != FtpStatusCode.PathnameCreated )
+            if ( !response.IsSuccess )
                 throw new FtpException( response.ResponseMessage );
 
             WorkingDirectory = pwdResponse.ResponseMessage.Split( '"' )[ 1 ];
@@ -171,7 +184,7 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Renaming from {from}, to {to}" );
-            var renameFromResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var renameFromResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.RNFR,
                 Data = from
@@ -180,13 +193,13 @@
             if ( renameFromResponse.FtpStatusCode != FtpStatusCode.FileCommandPending )
                 throw new FtpException( renameFromResponse.ResponseMessage );
 
-            var renameToResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var renameToResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.RNTO,
                 Data = to
             } );
 
-            if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
+            if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK && renameToResponse.FtpStatusCode != FtpStatusCode.ClosingData )
                 throw new FtpException( renameFromResponse.ResponseMessage );
         }
 
@@ -207,7 +220,7 @@
 
             EnsureLoggedIn();
 
-            var rmdResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var rmdResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.RMD,
                 Data = directory
@@ -263,7 +276,7 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Setting client name to {clientName}" );
 
-            return await SendCommandAsync( new FtpCommandEnvelope
+            return await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.CLNT,
                 Data = clientName
@@ -292,7 +305,9 @@
         {
             string filePath = WorkingDirectory.CombineAsUriWith( fileName );
             Logger?.LogDebug( $"[FtpClient] Opening file read stream for {filePath}" );
-            var segments = filePath.Split( '/' ).Where( x => !x.IsNullOrWhiteSpace() ).ToList();
+            var segments = filePath.Split( '/' )
+                                   .Where( x => !x.IsNullOrWhiteSpace() )
+                                   .ToList();
             await CreateDirectoryStructureRecursively( segments.Take( segments.Count - 1 ).ToArray(), filePath.StartsWith( "/" ) );
             return new FtpWriteFileStream( await OpenFileStreamAsync( filePath, FtpCommand.STOR ), this, Logger );
         }
@@ -303,14 +318,11 @@
         /// <returns></returns>
         public async Task CloseFileWriteStreamAsync()
         {
-            if ( !dataSocket.Connected )
-                return;
-
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
 
-            dataSocket.Shutdown( SocketShutdown.Both );
+            dataStream.Dispose();
 
-            await GetResponseAsync();
+            await SocketStream.GetResponseAsync();
         }
 
         /// <summary>
@@ -319,9 +331,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
-            return await directoryProvider.ListAllAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
+                return await directoryProvider.ListAllAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -330,9 +349,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
-            return await directoryProvider.ListFilesAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
+                return await directoryProvider.ListFilesAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -341,9 +367,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing directories in {WorkingDirectory}" );
-            return await directoryProvider.ListDirectoriesAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing directories in {WorkingDirectory}" );
+                return await directoryProvider.ListDirectoriesAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
 
@@ -356,14 +389,14 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Deleting file {fileName}" );
-            var deleResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.DELE,
                 Data = fileName
             } );
 
-            if ( deleResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
-                throw new FtpException( deleResponse.ResponseMessage );
+            if ( !response.IsSuccess )
+                throw new FtpException( response.ResponseMessage );
         }
 
         /// <summary>
@@ -376,7 +409,7 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Setting transfer mode {transferMode}, {secondType}" );
-            var typeResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.TYPE,
                 Data = secondType != '\0'
@@ -384,8 +417,8 @@
                     : $"{(char) transferMode}"
             } );
 
-            if ( typeResponse.FtpStatusCode != FtpStatusCode.CommandOK )
-                throw new FtpException( typeResponse.ResponseMessage );
+            if ( !response.IsSuccess )
+                throw new FtpException( response.ResponseMessage );
         }
 
         /// <summary>
@@ -397,7 +430,7 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Getting file size for {fileName}" );
-            var sizeResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var sizeResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.SIZE,
                 Data = fileName
@@ -406,105 +439,14 @@
             if ( sizeResponse.FtpStatusCode != FtpStatusCode.FileStatus )
                 throw new FtpException( sizeResponse.ResponseMessage );
 
-            long fileSize = long.Parse( sizeResponse.ResponseMessage.Substring( 4 ) );
+            long fileSize = long.Parse( sizeResponse.ResponseMessage );
             return fileSize;
         }
 
-
         /// <summary>
-        /// Sends a command to the FTP server, and returns the response
-        /// </summary>
-        /// <param name="envelope"></param>
-        /// <returns></returns>
-        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope )
-        {
-            string commandString = envelope.GetCommandString();
-            return await SendCommandAsync(commandString);
-        }
-
-        /// <summary>
-        /// Sends a command to the FTP server, and returns the response
-        /// </summary>
-        /// <param name="command"></param>
-        /// <returns></returns>
-        public async Task<FtpResponse> SendCommandAsync( FtpCommand command )
-        {
-            return await SendCommandAsync( new FtpCommandEnvelope
-            {
-                FtpCommand = command
-            } );
-        }
-
-        public async Task<FtpResponse> SendCommandAsync(string command)
-        {
-            await commandSemaphore.WaitAsync();
-
-            if (HasResponsePending())
-            {
-                await GetResponseAsync();
-            }
-
-            Logger?.LogDebug($"[FtpClient] Sending command: {command}");
-            byte[] data = Encoding.GetBytes($"{command}\r\n");
-            commandSocket.Send(data);
-
-            var response = await GetResponseAsync();
-
-            commandSemaphore.Release();
-            return response;
-        }
-
-        public bool HasResponsePending()
-        {
-            return commandSocket.Connected && commandSocket.Available > 0;
-        }
-
-        /// <summary>
-        /// Retrieves the latest response from the FTP server on the command socket
+        /// Determines the type of directory listing the FTP server will return, and set the appropriate parser
         /// </summary>
         /// <returns></returns>
-        public async Task<FtpResponse> GetResponseAsync()
-        {
-            await Task.Delay( 0 );
-            Logger?.LogDebug( "[FtpClient] Getting Response" );
-
-            do
-            {
-                var buffer = new byte[Constants.BUFFER_SIZE];
-                string statusMessage = string.Empty;
-
-                while ( true )
-                {
-                    int byteCount = commandSocket.Receive( buffer, buffer.Length, SocketFlags.None );
-                    if ( byteCount == 0 )
-                        break;
-
-                    statusMessage += Encoding.ASCII.GetString( buffer, 0, byteCount );
-
-                    if ( byteCount < buffer.Length )
-                        break;
-                }
-
-                var message = statusMessage.Split( Constants.LINEFEED );
-
-                statusMessage = statusMessage.Length > 2
-                    ? message[ message.Length - 2 ]
-                    : message[ 0 ];
-
-                if ( !statusMessage.Substring( 3, 1 ).Equals( " " ) )
-                    continue;
-
-                Logger?.LogDebug( $"[FtpClient] {statusMessage}" );
-
-                return new FtpResponse
-                {
-                    ResponseMessage = statusMessage,
-                    FtpStatusCode = statusMessage.ToStatusCode(),
-                    Data = message
-                };
-            } while ( true );
-        }
-
         private IDirectoryProvider DetermineDirectoryProvider()
         {
             Logger?.LogDebug( "[FtpClient] Determining directory provider" );
@@ -518,7 +460,7 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( "[FtpClient] Determining features" );
-            var response = await SendCommandAsync( FtpCommand.FEAT );
+            var response = await SocketStream.SendCommandAsync( FtpCommand.FEAT );
 
             if ( response.FtpStatusCode == FtpStatusCode.CommandSyntaxError || response.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
                 return Enumerable.Empty<string>();
@@ -526,11 +468,6 @@
             var features = response.Data.Where( x => !x.StartsWith( ( (int) FtpStatusCode.SystemHelpReply ).ToString() ) && !x.IsNullOrWhiteSpace() )
                                    .Select( x => x.Replace( Constants.CARRIAGE_RETURN, string.Empty ).Trim() )
                                    .ToList();
-
-
-            foreach ( string feature in features )
-                Logger?.LogDebug( feature );
-
 
             return features;
         }
@@ -546,7 +483,7 @@
             Logger?.LogDebug( $"[FtpClient] Creating directory structure recursively {string.Join( "/", directories )}" );
             string originalPath = WorkingDirectory;
 
-            if ( isRootedPath && directories.Any())
+            if ( isRootedPath && directories.Any() )
                 await ChangeWorkingDirectoryAsync( "/" );
 
             if ( !directories.Any() )
@@ -554,7 +491,7 @@
 
             if ( directories.Count == 1 )
             {
-                await SendCommandAsync( new FtpCommandEnvelope
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.MKD,
                     Data = directories.First()
@@ -569,7 +506,7 @@
                 if ( directory.IsNullOrWhiteSpace() )
                     continue;
 
-                var response = await SendCommandAsync( new FtpCommandEnvelope
+                var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.CWD,
                     Data = directory
@@ -578,12 +515,12 @@
                 if ( response.FtpStatusCode != FtpStatusCode.ActionNotTakenFileUnavailable )
                     continue;
 
-                await SendCommandAsync( new FtpCommandEnvelope
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.MKD,
                     Data = directory
                 } );
-                await SendCommandAsync( new FtpCommandEnvelope
+                await SocketStream.SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.CWD,
                     Data = directory
@@ -604,9 +541,9 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Opening filestream for {fileName}, {command}" );
-            dataSocket = await ConnectDataSocketAsync();
+            dataStream = await ConnectDataStreamAsync();
 
-            var retrResponse = await SendCommandAsync( new FtpCommandEnvelope
+            var retrResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = command,
                 Data = fileName
@@ -617,7 +554,7 @@
                  ( retrResponse.FtpStatusCode != FtpStatusCode.ClosingData ) )
                 throw new FtpException( retrResponse.ResponseMessage );
 
-            return new NetworkStream( dataSocket );
+            return dataStream;
         }
 
         /// <summary>
@@ -630,42 +567,13 @@
         }
 
         /// <summary>
-        /// Produces a command socket to the FTP server
-        /// </summary>
-        /// <returns></returns>
-        private async Task ConnectCommandSocketAsync()
-        {
-            try
-            {
-                Logger?.LogDebug( $"Connecting command socket, {Configuration.Host}:{Configuration.Port}" );
-
-                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, Configuration.Port, Configuration.IpVersion );
-
-                commandSocket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
-                {
-                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-                };
-                commandSocket.Connect( ipEndpoint );
-
-                var response = await GetResponseAsync();
-                await BailIfResponseNotAsync( response, FtpStatusCode.SendUserCommand );
-            }
-            catch ( Exception ex )
-            {
-                Logger?.LogDebug( "Connecting to command socket failed" );
-                await LogOutAsync();
-                throw new FtpException( "Unable to login to FTP server", ex );
-            }
-        }
-
-        /// <summary>
         /// Produces a data socket using Extended Passive mode
         /// </summary>
         /// <returns></returns>
-        internal async Task<Socket> ConnectDataSocketAsync()
+        internal async Task<Stream> ConnectDataStreamAsync()
         {
             Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
-            var epsvResult = await SendCommandAsync( FtpCommand.EPSV );
+            var epsvResult = await SocketStream.SendCommandAsync( FtpCommand.EPSV );
 
             if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
                 throw new FtpException( epsvResult.ResponseMessage );
@@ -674,28 +582,7 @@
             if ( !passivePortNumber.HasValue )
                 throw new FtpException( "Could not detmine EPSV data port" );
 
-
-            Socket socket = null;
-            try
-            {
-                Logger?.LogDebug( $"Connecting data socket, {Configuration.Host}:{passivePortNumber.Value}" );
-
-                var ipEndpoint = await dnsResolver.ResolveAsync( Configuration.Host, passivePortNumber.Value, Configuration.IpVersion );
-
-                socket = new Socket( AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp )
-                {
-                    ReceiveTimeout = Configuration.TimeoutSeconds * 1000
-                };
-                socket.Connect( ipEndpoint );
-
-                return socket;
-            }
-            catch ( Exception ex )
-            {
-                if ( socket != null && socket.Connected )
-                    socket.Shutdown( SocketShutdown.Both );
-                throw new FtpException( "Can't connect to remote server", ex );
-            }
+            return await SocketStream.OpenDataStreamAsync( Configuration.Host, passivePortNumber.Value, CancellationToken.None );
         }
 
         /// <summary>
@@ -709,19 +596,51 @@
             if ( codes.Any( x => x == response.FtpStatusCode ) )
                 return;
 
-            Logger?.LogDebug( $"Bailing due to response codes not being one of: [{string.Join( ",", codes )}]" );
+            Logger?.LogDebug( $"Bailing due to response codes being {response.FtpStatusCode}, which is not one of: [{string.Join( ",", codes )}]" );
 
             await LogOutAsync();
             throw new FtpException( response.ResponseMessage );
         }
 
+        /// <summary>
+        /// Determine if the FTP server supports UTF8 encoding, and set it to the default if possible
+        /// </summary>
+        /// <returns></returns>
+        private async Task EnableUTF8IfPossible()
+        {
+            if ( Equals( SocketStream.Encoding, Encoding.ASCII ) && Features.Any( x => x == Constants.UTF8 ) )
+            {
+                SocketStream.Encoding = Encoding.UTF8;
+            }
+
+            if ( Equals( SocketStream.Encoding, Encoding.UTF8 ) )
+            {
+                // If the server supports UTF8 it should already be enabled and this
+                // command should not matter however there are conflicting drafts
+                // about this so we'll just execute it to be safe. 
+                await SocketStream.SendCommandAsync( "OPTS UTF8 ON" );
+            }
+        }
+
+        /// <summary>
+        /// Ignore any stale data we mah have waiting on the stream
+        /// </summary>
+        /// <returns></returns>
+        private async Task IgnoreStaleData()
+        {
+            if ( IsConnected && SocketStream.SocketDataAvailable() )
+            {
+                var staleData = await SocketStream.GetResponseAsync();
+                Logger?.LogWarning( $"Stale data detected: {staleData.ResponseMessage}" );
+            }
+        }
+
         public void Dispose()
         {
-            Logger?.LogDebug( "Disposing of resources" );
-            Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
-            commandSemaphore.Release();
-            commandSocket?.Dispose();
-            dataSocket?.Dispose();
+            Logger?.LogDebug( "Disposing of FtpClient" );
+            Task.WaitAny( LogOutAsync() );
+            SocketStream.Dispose();
+            dataSocketSemaphore.Dispose();
         }
     }
 }

@@ -35,7 +35,7 @@
             return int.Parse( match.Groups[ "PortNumber" ].Value );
         }
 
-        internal static FtpNodeType ToNodeType( this string operand )
+        private static FtpNodeType ToNodeType( this string operand )
         {
             switch ( operand )
             {

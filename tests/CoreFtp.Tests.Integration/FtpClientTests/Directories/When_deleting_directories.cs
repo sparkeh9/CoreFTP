@@ -1,10 +1,10 @@
 namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
 {
     using System;
-    using System.Diagnostics;
     using System.Linq;
     using System.Threading.Tasks;
     using AsyncFriendlyStackTrace;
+    using Enum;
     using FluentAssertions;
     using Helpers;
     using Infrastructure;
@@ -15,15 +15,22 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
     {
         public When_deleting_directories( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_throw_exception_when_folder_nonexistent()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_throw_exception_when_folder_nonexistent( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
             {
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
             } ) )
             {
                 sut.Logger = Logger;
@@ -35,8 +42,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
             }
         }
 
-        [ Fact ]
-        public async Task Should_delete_directory_when_exists()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_delete_directory_when_exists( FtpEncryption encryption )
         {
             string randomDirectoryName = Guid.NewGuid().ToString();
 
@@ -45,7 +55,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
             } ) )
             {
                 sut.Logger = Logger;
@@ -58,8 +72,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
             }
         }
 
-        [ Fact ]
-        public async Task Should_recursively_delete_folder()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_recursively_delete_folder( FtpEncryption encryption )
         {
             string randomDirectoryName = Guid.NewGuid().ToString();
 
@@ -68,7 +85,11 @@ namespace CoreFtp.Tests.Integration.FtpClientTests.Directories
                 Host = Program.FtpConfiguration.Host,
                 Username = Program.FtpConfiguration.Username,
                 Password = Program.FtpConfiguration.Password,
-                Port = Program.FtpConfiguration.Port
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
             } ) )
             {
                 sut.Logger = Logger;

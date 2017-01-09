@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Net;
     using System.Net.Sockets;
+    using System.Threading;
     using System.Threading.Tasks;
     using Enum;
     using Infrastructure.Caching;
@@ -17,12 +18,9 @@
             cache = new InMemoryCache();
         }
 
-        public async Task<IPEndPoint> ResolveAsync( string endpoint, int port, IpVersion ipVersion = IpVersion.IpV4 )
+        public async Task<IPEndPoint> ResolveAsync( string endpoint, int port, IpVersion ipVersion = IpVersion.IpV4, CancellationToken token = default( CancellationToken ) )
         {
-            string cacheKey = string.Join( ":",
-                                           endpoint,
-                                           port,
-                                           ipVersion );
+            string cacheKey = $"{endpoint}:{port}:{ipVersion}";
 
             if ( port < IPEndPoint.MinPort || port > IPEndPoint.MaxPort )
                 throw new ArgumentOutOfRangeException( nameof( port ) );
@@ -30,11 +28,12 @@
             if ( cache.HasKey( cacheKey ) )
                 return cache.Get<IPEndPoint>( cacheKey );
 
-
-            var addressFamily = ipVersion == IpVersion.IpV4
+            var addressFamily = ipVersion.HasFlag( IpVersion.IpV4 )
                 ? AddressFamily.InterNetwork
                 : AddressFamily.InterNetworkV6;
 
+
+            token.ThrowIfCancellationRequested();
 
             IPEndPoint ipEndpoint;
 
@@ -59,10 +58,21 @@
                     return ipEndpoint;
                 }
 
+
+                if ( addressFamily == AddressFamily.InterNetwork && ipVersion.HasFlag( IpVersion.IpV6 ) )
+                {
+                    ipEndpoint = await ResolveAsync( endpoint, port, IpVersion.IpV6, token );
+
+                    if ( ipEndpoint != null )
+                    {
+                        cache.Add( cacheKey, ipEndpoint, TimeSpan.FromMinutes( 60 ) );
+                        return ipEndpoint;
+                    }
+                }
+
                 var firstAddress = allAddresses.FirstOrDefault();
                 if ( firstAddress == null )
                     return null;
-
 
                 switch ( firstAddress.AddressFamily )
                 {
@@ -81,7 +91,7 @@
 
                 return ipEndpoint;
             }
-            catch ( Exception )
+            catch
             {
                 return null;
             }

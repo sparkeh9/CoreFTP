@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading.Tasks;
+    using Enum;
     using FluentAssertions;
     using Helpers;
     using Infrastructure;
@@ -12,20 +13,27 @@
     {
         public When_opening_a_file_for_download( ITestOutputHelper outputHelper ) : base( outputHelper ) {}
 
-        [ Fact ]
-        public async Task Should_present_read_stream_and_deliver_file()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_present_read_stream_and_deliver_file( FtpEncryption encryption )
         {
             string randomFileName = $"{Guid.NewGuid()}.jpg";
             var tempFile = ResourceHelpers.GetTempFileInfo();
             tempFile.Length.Should().Be( 0 );
 
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();
@@ -47,16 +55,23 @@
             tempFile.Delete();
         }
 
-        [ Fact ]
-        public async Task Should_throw_exception_when_file_does_not_exist()
+        [ Theory ]
+        [ InlineData( FtpEncryption.None ) ]
+        [ InlineData( FtpEncryption.Explicit ) ]
+        [ InlineData( FtpEncryption.Implicit ) ]
+        public async Task Should_throw_exception_when_file_does_not_exist( FtpEncryption encryption )
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
-                                             {
-                                                 Host = Program.FtpConfiguration.Host,
-                                                 Username = Program.FtpConfiguration.Username,
-                                                 Password = Program.FtpConfiguration.Password,
-                                                 Port = Program.FtpConfiguration.Port
-                                             } ) )
+            {
+                Host = Program.FtpConfiguration.Host,
+                Username = Program.FtpConfiguration.Username,
+                Password = Program.FtpConfiguration.Password,
+                Port = encryption == FtpEncryption.Implicit
+                    ? 990
+                    : Program.FtpConfiguration.Port,
+                EncryptionType = encryption,
+                IgnoreCertificateErrors = true
+            } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();
