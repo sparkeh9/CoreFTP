@@ -17,6 +17,24 @@ CoreFTP Supports and includes compiled binaries for:
 ###Usage###
 Usage of this small library was intended to be as simple as possible. The integration test suite provides various example of basic FTP usage.
 
+#### Connecting to an FTP/S server ####
+Connecting to FTP/s supports both Explicit and Implicit modes.
+```
+using ( var ftpClient = new FtpClient( new FtpClientConfiguration
+                                             {
+                                                 Host = "localhost",
+                                                 Username = "user",
+                                                 Password = "password",
+                                                 Port = 990,
+                                                 EncryptionType = FtpEncryption.Implicit,
+                                                 IgnoreCertificateErrors = true
+                                             } ) )
+{
+    await ftpClient.LoginAsync();
+}
+
+```
+
 ####Downloading a file to a filestream on local disk ####
 
 ```
