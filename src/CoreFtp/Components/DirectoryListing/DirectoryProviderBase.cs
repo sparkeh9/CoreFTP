@@ -9,7 +9,7 @@ namespace CoreFtp.Components.DirectoryListing
     using Infrastructure;
     using Microsoft.Extensions.Logging;
 
-    internal class DirectoryProviderBase : IDirectoryProvider
+    internal abstract class DirectoryProviderBase : IDirectoryProvider
     {
         protected FtpClient ftpClient;
         protected FtpClientConfiguration configuration;
