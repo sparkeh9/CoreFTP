@@ -37,7 +37,7 @@ namespace CoreFtp.Infrastructure.Stream
             base.Dispose( disposing );
             encapsulatedStream.Dispose();
 
-            if ( client.SocketStream.HasResponsePending() )
+            if ( client.SocketStream.SocketDataAvailable() )
             {
                 Task.WaitAny( client.SocketStream.GetResponseAsync(), Task.Delay( 5000 ) );
             }

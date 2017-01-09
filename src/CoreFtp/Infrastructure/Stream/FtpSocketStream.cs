@@ -33,7 +33,7 @@
         protected readonly SemaphoreSlim semaphore = new SemaphoreSlim( 1, 1 );
         protected readonly SemaphoreSlim receiveSemaphore = new SemaphoreSlim( 1, 1 );
 
-        internal bool IsCloned { get; set; }
+        internal bool IsDataConnection { get; set; }
 
         public FtpSocketStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
         {
@@ -133,13 +133,10 @@
         {
             await ConnectStreamAsync( token );
 
-            if ( SocketDataAvailable() )
-            {
-                // Throw away welcome message
-                await GetResponseAsync( CancellationToken.None );
-            }
-
             if ( !Configuration.ShouldEncrypt )
+                return;
+
+            if ( !IsConnected || IsEncrypted )
                 return;
 
             if ( Configuration.EncryptionType == FtpEncryption.Implicit )
@@ -186,10 +183,6 @@
             }
         }
 
-        public bool HasResponsePending()
-        {
-            return Socket != null && Socket.Available > 0;
-        }
 
         public bool SocketDataAvailable()
         {
@@ -216,7 +209,7 @@
 
             try
             {
-                if ( HasResponsePending() )
+                if ( SocketDataAvailable() )
                 {
                     var staleDataResult = await GetResponseAsync( token );
                     Logger?.LogWarning( $"Stale data on socket {staleDataResult.ResponseMessage}" );
@@ -261,7 +254,7 @@
 
                     if ( !( match = Regex.Match( line, "^(?<statusCode>[0-9]{3}) (?<message>.*)$" ) ).Success )
                         continue;
-
+                    Logger?.LogDebug( "Finished receiving message" );
                     response.FtpStatusCode = match.Groups[ "statusCode" ].Value.ToStatusCode();
                     response.ResponseMessage = match.Groups[ "message" ].Value;
                     break;
@@ -278,7 +271,7 @@
         public async Task<Stream> OpenDataStreamAsync( string host, int port, CancellationToken token )
         {
             Logger?.LogDebug( "[FtpSocketStream] Opening datastream" );
-            var socketStream = new FtpSocketStream( Configuration, dnsResolver ) { Logger = Logger, IsCloned = true };
+            var socketStream = new FtpSocketStream( Configuration, dnsResolver ) { Logger = Logger, IsDataConnection = true };
             await socketStream.ConnectStreamAsync( host, port, token );
 
             if ( IsEncrypted )
@@ -295,11 +288,49 @@
 
         protected async Task ConnectStreamAsync( string host, int port, CancellationToken token )
         {
-            Logger?.LogDebug( $"Connecting stream on {host}:{port}" );
-            Socket = await ConnectSocketAsync( host, port, token );
+            try
+            {
+                await semaphore.WaitAsync( token );
+                Logger?.LogDebug( $"Connecting stream on {host}:{port}" );
+                Socket = await ConnectSocketAsync( host, port, token );
 
-            BaseStream = new NetworkStream( Socket );
-            LastActivity = DateTime.Now;
+                BaseStream = new NetworkStream( Socket );
+                LastActivity = DateTime.Now;
+
+                if ( IsDataConnection )
+                {
+
+                    if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Explicit )
+                    {
+                        await ActivateEncryptionAsync();
+                    }
+
+                    return;
+                }
+                else
+                {
+                    if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Implicit )
+                    {
+                        await ActivateEncryptionAsync();
+                    }
+                }
+
+
+                Logger?.LogDebug( "Waiting for welcome message" );
+                while ( true )
+                {
+                    if ( SocketDataAvailable() )
+                    {
+                        await GetResponseAsync( token );
+                        return;
+                    }
+                    await Task.Delay( 10, token );
+                }
+            }
+            finally
+            {
+                semaphore.Release();
+            }
         }
 
 
@@ -327,6 +358,7 @@
 
         protected async Task EncryptImplicitly( CancellationToken token )
         {
+            Logger?.LogDebug( "Encrypting implicitly" );
             await ActivateEncryptionAsync();
 
             var response = await GetResponseAsync( token );
@@ -338,6 +370,7 @@
 
         protected async Task EncryptExplicitly( CancellationToken token )
         {
+            Logger?.LogDebug( "Encrypting explicitly" );
             var response = await SendCommandAsync( "AUTH TLS", token );
 
             if ( !response.IsSuccess )
@@ -354,8 +387,8 @@
             if ( BaseStream == null )
                 throw new InvalidOperationException( "The base network stream is null." );
 
-            if ( SslStream != null )
-                throw new InvalidOperationException( "SSL Encryption has already been enabled on this stream." );
+            if ( IsEncrypted )
+                return;
 
             try
             {
@@ -384,6 +417,7 @@
             {
                 Socket?.Shutdown( SocketShutdown.Both );
                 BaseStream?.Dispose();
+                SslStream?.Dispose();
             }
             catch ( Exception exception )
             {
@@ -398,14 +432,7 @@
 
         protected override void Dispose( bool disposing )
         {
-            if ( IsCloned )
-            {
-                Logger?.LogDebug( "Disposing of data connection" );
-            }
-            else
-            {
-                Logger?.LogDebug( "Disposing of control connection" );
-            }
+            Logger?.LogDebug( IsDataConnection ? "Disposing of data connection" : "Disposing of control connection" );
 
             if ( disposing )
             {

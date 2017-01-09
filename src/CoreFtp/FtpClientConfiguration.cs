@@ -13,7 +13,7 @@
         public string Host { get; set; }
         public IpVersion IpVersion { get; set; } = IpVersion.IpV4;
         public FtpEncryption EncryptionType { get; set; } = FtpEncryption.None;
-        public bool IgnoreCertificateErrors { get; set; } = false;
+        public bool IgnoreCertificateErrors { get; set; } = true;
         public string Username { get; set; }
         public string Password { get; set; }
         public string BaseDirectory { get; set; } = "/";

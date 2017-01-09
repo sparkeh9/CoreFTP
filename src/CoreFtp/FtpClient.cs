@@ -19,20 +19,10 @@
     public class FtpClient : IDisposable
     {
         private IDirectoryProvider directoryProvider;
-        private ILogger _logger;
+        private ILogger logger;
         private Stream dataStream;
         internal readonly SemaphoreSlim dataSocketSemaphore = new SemaphoreSlim( 1, 1 );
         public FtpClientConfiguration Configuration { get; }
-
-        public ILogger Logger
-        {
-            private get { return _logger; }
-            set
-            {
-                _logger = value;
-                SocketStream.Logger = value;
-            }
-        }
 
         internal IEnumerable<string> Features { get; private set; }
         internal FtpSocketStream SocketStream { get; }
@@ -40,6 +30,16 @@
         public bool IsEncrypted => SocketStream != null && SocketStream.IsEncrypted;
         public bool IsAuthenticated { get; private set; }
         public string WorkingDirectory { get; private set; } = "/";
+
+        public ILogger Logger
+        {
+            private get { return logger; }
+            set
+            {
+                logger = value;
+                SocketStream.Logger = value;
+            }
+        }
 
         public FtpClient( FtpClientConfiguration configuration )
         {
@@ -49,7 +49,6 @@
                 throw new ArgumentNullException( nameof( configuration.Host ) );
 
             SocketStream = new FtpSocketStream( Configuration, new DnsResolver() );
-
             Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
 
@@ -101,35 +100,24 @@
             }
 
             Features = await DetermineFeaturesAsync();
-            if ( Equals( SocketStream.Encoding, Encoding.ASCII ) && Features.Any( x => x == Constants.UTF8 ) )
-            {
-                SocketStream.Encoding = Encoding.UTF8;
-            }
-
-            if ( Equals( SocketStream.Encoding, Encoding.UTF8 ) )
-            {
-                // If the server supports UTF8 it should already be enabled and this
-                // command should not matter however there are conflicting drafts
-                // about this so we'll just execute it to be safe. 
-                await SocketStream.SendCommandAsync( "OPTS UTF8 ON" );
-            }
-
+            directoryProvider = DetermineDirectoryProvider();
+            await EnableUTF8IfPossible();
             await SetTransferMode( Configuration.Mode, Configuration.ModeSecondType );
 
             if ( Configuration.BaseDirectory != "/" )
+            {
                 await CreateDirectoryAsync( Configuration.BaseDirectory );
+            }
 
             await ChangeWorkingDirectoryAsync( Configuration.BaseDirectory );
-
-            directoryProvider = DetermineDirectoryProvider();
         }
-
 
         /// <summary>
         ///     Attemps to log the user out asynchronously, sends the QUIT command and terminates the command socket.
         /// </summary>
         public async Task LogOutAsync()
         {
+            await IgnoreStaleData();
             Logger?.LogDebug( "[FtpClient] Logging out" );
             if ( !IsConnected )
                 return;
@@ -158,12 +146,12 @@
                 Data = directory
             } );
 
-            if ( response.FtpStatusCode != FtpStatusCode.FileActionOK )
+            if ( !response.IsSuccess )
                 throw new FtpException( response.ResponseMessage );
 
             var pwdResponse = await SocketStream.SendCommandAsync( FtpCommand.PWD );
 
-            if ( pwdResponse.FtpStatusCode != FtpStatusCode.PathnameCreated )
+            if ( !response.IsSuccess )
                 throw new FtpException( response.ResponseMessage );
 
             WorkingDirectory = pwdResponse.ResponseMessage.Split( '"' )[ 1 ];
@@ -211,7 +199,7 @@
                 Data = to
             } );
 
-            if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
+            if ( renameToResponse.FtpStatusCode != FtpStatusCode.FileActionOK && renameToResponse.FtpStatusCode != FtpStatusCode.ClosingData )
                 throw new FtpException( renameFromResponse.ResponseMessage );
         }
 
@@ -343,9 +331,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
-            return await directoryProvider.ListAllAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
+                return await directoryProvider.ListAllAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -354,9 +349,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListFilesAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
-            return await directoryProvider.ListFilesAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing files in {WorkingDirectory}" );
+                return await directoryProvider.ListFilesAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -365,9 +367,16 @@
         /// <returns></returns>
         public async Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
         {
-            EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Listing directories in {WorkingDirectory}" );
-            return await directoryProvider.ListDirectoriesAsync();
+            try
+            {
+                EnsureLoggedIn();
+                Logger?.LogDebug( $"[FtpClient] Listing directories in {WorkingDirectory}" );
+                return await directoryProvider.ListDirectoriesAsync();
+            }
+            finally
+            {
+                await SocketStream.GetResponseAsync();
+            }
         }
 
 
@@ -380,14 +389,14 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Deleting file {fileName}" );
-            var deleResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+            var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.DELE,
                 Data = fileName
             } );
 
-            if ( deleResponse.FtpStatusCode != FtpStatusCode.FileActionOK )
-                throw new FtpException( deleResponse.ResponseMessage );
+            if ( !response.IsSuccess )
+                throw new FtpException( response.ResponseMessage );
         }
 
         /// <summary>
@@ -400,7 +409,7 @@
         {
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Setting transfer mode {transferMode}, {secondType}" );
-            var typeResponse = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
+            var response = await SocketStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.TYPE,
                 Data = secondType != '\0'
@@ -408,8 +417,8 @@
                     : $"{(char) transferMode}"
             } );
 
-            if ( typeResponse.FtpStatusCode != FtpStatusCode.CommandOK )
-                throw new FtpException( typeResponse.ResponseMessage );
+            if ( !response.IsSuccess )
+                throw new FtpException( response.ResponseMessage );
         }
 
         /// <summary>
@@ -593,11 +602,45 @@
             throw new FtpException( response.ResponseMessage );
         }
 
+        /// <summary>
+        /// Determine if the FTP server supports UTF8 encoding, and set it to the default if possible
+        /// </summary>
+        /// <returns></returns>
+        private async Task EnableUTF8IfPossible()
+        {
+            if ( Equals( SocketStream.Encoding, Encoding.ASCII ) && Features.Any( x => x == Constants.UTF8 ) )
+            {
+                SocketStream.Encoding = Encoding.UTF8;
+            }
+
+            if ( Equals( SocketStream.Encoding, Encoding.UTF8 ) )
+            {
+                // If the server supports UTF8 it should already be enabled and this
+                // command should not matter however there are conflicting drafts
+                // about this so we'll just execute it to be safe. 
+                await SocketStream.SendCommandAsync( "OPTS UTF8 ON" );
+            }
+        }
+
+        /// <summary>
+        /// Ignore any stale data we mah have waiting on the stream
+        /// </summary>
+        /// <returns></returns>
+        private async Task IgnoreStaleData()
+        {
+            if ( IsConnected && SocketStream.SocketDataAvailable() )
+            {
+                var staleData = await SocketStream.GetResponseAsync();
+                Logger?.LogWarning( $"Stale data detected: {staleData.ResponseMessage}" );
+            }
+        }
+
         public void Dispose()
         {
             Logger?.LogDebug( "Disposing of FtpClient" );
-            Task.WaitAny( LogOutAsync(), Task.Delay( 5000 ) );
+            Task.WaitAny( LogOutAsync() );
             SocketStream.Dispose();
+            dataSocketSemaphore.Dispose();
         }
     }
 }
