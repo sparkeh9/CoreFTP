@@ -567,7 +567,7 @@
         }
 
         /// <summary>
-        /// Produces a data socket using Extended Passive mode
+        /// Produces a data socket using Passive (PASV) or Extended Passive (EPSV) mode
         /// </summary>
         /// <returns></returns>
         internal async Task<Stream> ConnectDataStreamAsync()
@@ -575,12 +575,21 @@
             Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
             var epsvResult = await SocketStream.SendCommandAsync( FtpCommand.EPSV );
 
-            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
-                throw new FtpException( epsvResult.ResponseMessage );
+            int? passivePortNumber;
+            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive)
+            {
+                // Try with passive in case extended passive fails
+                var pasvResult = await SocketStream.SendCommandAsync (FtpCommand.PASV);
+                if (pasvResult.FtpStatusCode != FtpStatusCode.EnteringPassive)
+                    throw new FtpException( pasvResult.ResponseMessage );
 
-            var passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
+                passivePortNumber = pasvResult.ResponseMessage.ExtractPasvPortNumber();
+            }
+            else
+                passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
+
             if ( !passivePortNumber.HasValue )
-                throw new FtpException( "Could not detmine EPSV data port" );
+                throw new FtpException( "Could not determine EPSV/PASV data port" );
 
             return await SocketStream.OpenDataStreamAsync( Configuration.Host, passivePortNumber.Value, CancellationToken.None );
         }
