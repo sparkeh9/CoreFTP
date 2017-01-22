@@ -85,7 +85,7 @@
                 if ( stream == null )
                     throw new FtpException( "Could not establish a data connection" );
 
-                var result = await ftpClient.SocketStream.SendCommandAsync( FtpCommand.MLSD );
+                var result = await ftpClient.ControlStream.SendCommandAsync( FtpCommand.MLSD );
                 if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) && ( result.FtpStatusCode != FtpStatusCode.ClosingData ) )
                     throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
 

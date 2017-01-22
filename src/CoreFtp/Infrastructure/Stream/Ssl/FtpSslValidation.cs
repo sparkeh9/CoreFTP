@@ -2,5 +2,5 @@
 {
     using Stream;
 
-    public delegate void FtpSslValidation( FtpSocketStream control, FtpSslValidationEventArgs e );
+    public delegate void FtpSslValidation( FtpControlStream control, FtpSslValidationEventArgs e );
 }

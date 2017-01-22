@@ -19,7 +19,7 @@ namespace CoreFtp.Components.DirectoryListing
         protected IEnumerable<string> RetrieveDirectoryListing()
         {
             string line;
-            while ( ( line = ReadLine( ftpClient.SocketStream.Encoding ) ) != null )
+            while ( ( line = ReadLine( ftpClient.ControlStream.Encoding ) ) != null )
             {
                 logger?.LogDebug( line );
                 yield return line;

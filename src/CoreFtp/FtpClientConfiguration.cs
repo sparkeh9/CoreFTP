@@ -8,7 +8,6 @@
     public class FtpClientConfiguration
     {
         public int TimeoutSeconds { get; set; } = 120;
-        public int BufferSize { get; set; } = 512;
         public int Port { get; set; } = Constants.FtpPort;
         public string Host { get; set; }
         public IpVersion IpVersion { get; set; } = IpVersion.IpV4;

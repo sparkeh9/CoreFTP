@@ -85,7 +85,7 @@
             {
                 stream = await ftpClient.ConnectDataStreamAsync();
 
-                var result = await ftpClient.SocketStream.SendCommandAsync( new FtpCommandEnvelope
+                var result = await ftpClient.ControlStream.SendCommandAsync( new FtpCommandEnvelope
                 {
                     FtpCommand = FtpCommand.LIST
                 } );

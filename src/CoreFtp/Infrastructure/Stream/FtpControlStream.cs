@@ -16,7 +16,7 @@
     using Extensions;
     using Microsoft.Extensions.Logging;
 
-    public class FtpSocketStream : Stream
+    public class FtpControlStream : Stream
     {
         protected readonly FtpClientConfiguration Configuration;
         public ILogger Logger;
@@ -35,7 +35,19 @@
 
         internal bool IsDataConnection { get; set; }
 
-        public FtpSocketStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
+        internal void SetTimeouts( int milliseconds )
+        {
+            BaseStream.ReadTimeout = milliseconds;
+            BaseStream.WriteTimeout = milliseconds;
+        }
+
+        internal void ResetTimeouts()
+        {
+            BaseStream.ReadTimeout = Configuration.TimeoutSeconds * 1000;
+            BaseStream.WriteTimeout = Configuration.TimeoutSeconds * 1000;
+        }
+
+        public FtpControlStream( FtpClientConfiguration configuration, IDnsResolver dnsResolver )
         {
             Logger?.LogDebug( "Constructing new FtpSocketStream" );
             Configuration = configuration;
@@ -153,7 +165,7 @@
             await WriteAsync( data, 0, data.Length, CancellationToken.None );
         }
 
-        protected string ReadLine( Encoding encoding )
+        protected string ReadLine( Encoding encoding, CancellationToken token )
         {
             if ( encoding == null )
                 throw new ArgumentNullException( nameof( encoding ) );
@@ -162,8 +174,11 @@
             var buf = new byte[1];
             string line = null;
 
+            token.ThrowIfCancellationRequested();
+
             while ( Read( buf, 0, buf.Length ) > 0 )
             {
+                token.ThrowIfCancellationRequested();
                 data.Add( buf[ 0 ] );
                 if ( (char) buf[ 0 ] != '\n' )
                     continue;
@@ -174,10 +189,10 @@
             return line;
         }
 
-        private IEnumerable<string> ReadLines()
+        private IEnumerable<string> ReadLines( CancellationToken token )
         {
             string line;
-            while ( ( line = ReadLine( Encoding ) ) != null )
+            while ( ( line = ReadLine( Encoding, token ) ) != null )
             {
                 yield return line;
             }
@@ -242,11 +257,18 @@
 
             try
             {
+                token.ThrowIfCancellationRequested();
+                if ( !SocketDataAvailable() )
+                {
+                    Logger?.LogWarning( "Response expected, but no data exists on the socket" );
+                }
+
                 var response = new FtpResponse();
                 var data = new List<string>();
 
-                foreach ( string line in ReadLines() )
+                foreach ( string line in ReadLines( token ) )
                 {
+                    token.ThrowIfCancellationRequested();
                     Logger?.LogDebug( line );
                     data.Add( line );
 
@@ -271,7 +293,7 @@
         public async Task<Stream> OpenDataStreamAsync( string host, int port, CancellationToken token )
         {
             Logger?.LogDebug( "[FtpSocketStream] Opening datastream" );
-            var socketStream = new FtpSocketStream( Configuration, dnsResolver ) { Logger = Logger, IsDataConnection = true };
+            var socketStream = new FtpControlStream( Configuration, dnsResolver ) { Logger = Logger, IsDataConnection = true };
             await socketStream.ConnectStreamAsync( host, port, token );
 
             if ( IsEncrypted )
@@ -294,12 +316,15 @@
                 Logger?.LogDebug( $"Connecting stream on {host}:{port}" );
                 Socket = await ConnectSocketAsync( host, port, token );
 
-                BaseStream = new NetworkStream( Socket );
+                BaseStream = new NetworkStream( Socket )
+                {
+//                    ReadTimeout = Configuration.TimeoutSeconds * 1000,
+//                    WriteTimeout = Configuration.TimeoutSeconds * 1000
+                };
                 LastActivity = DateTime.Now;
 
                 if ( IsDataConnection )
                 {
-
                     if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Explicit )
                     {
                         await ActivateEncryptionAsync();
