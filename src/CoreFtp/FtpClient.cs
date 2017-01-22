@@ -316,7 +316,7 @@
         /// </summary>
         /// <param name="ctsToken"></param>
         /// <returns></returns>
-        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default(CancellationToken))
+        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default( CancellationToken ) )
         {
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
             dataStream.Dispose();
@@ -575,11 +575,11 @@
             var epsvResult = await ControlStream.SendCommandAsync( FtpCommand.EPSV );
 
             int? passivePortNumber;
-            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive)
+            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
             {
                 // Try with passive in case extended passive fails
-                var pasvResult = await SocketStream.SendCommandAsync (FtpCommand.PASV);
-                if (pasvResult.FtpStatusCode != FtpStatusCode.EnteringPassive)
+                var pasvResult = await ControlStream.SendCommandAsync( FtpCommand.PASV );
+                if ( pasvResult.FtpStatusCode != FtpStatusCode.EnteringPassive )
                     throw new FtpException( pasvResult.ResponseMessage );
 
                 passivePortNumber = pasvResult.ResponseMessage.ExtractPasvPortNumber();
