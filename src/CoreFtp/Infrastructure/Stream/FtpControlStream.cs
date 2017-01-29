@@ -316,11 +316,7 @@
                 Logger?.LogDebug( $"Connecting stream on {host}:{port}" );
                 Socket = await ConnectSocketAsync( host, port, token );
 
-                BaseStream = new NetworkStream( Socket )
-                {
-//                    ReadTimeout = Configuration.TimeoutSeconds * 1000,
-//                    WriteTimeout = Configuration.TimeoutSeconds * 1000
-                };
+                BaseStream = new NetworkStream( Socket );
                 LastActivity = DateTime.Now;
 
                 if ( IsDataConnection )
@@ -340,8 +336,8 @@
                     }
                 }
 
-
                 Logger?.LogDebug( "Waiting for welcome message" );
+
                 while ( true )
                 {
                     if ( SocketDataAvailable() )
@@ -427,7 +423,7 @@
             }
         }
 
-        protected bool OnValidateCertificate( X509Certificate certificate, X509Chain chain, SslPolicyErrors errors )
+        private bool OnValidateCertificate( X509Certificate certificate, X509Chain chain, SslPolicyErrors errors )
         {
             if ( Configuration.IgnoreCertificateErrors )
                 return true;

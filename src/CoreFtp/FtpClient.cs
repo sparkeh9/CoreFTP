@@ -630,6 +630,16 @@
             }
         }
 
+        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope, CancellationToken token = default( CancellationToken ) )
+        {
+            return await ControlStream.SendCommandAsync( envelope, token );
+        }
+
+        public async Task<FtpResponse> SendCommandAsync( string command, CancellationToken token = default( CancellationToken ) )
+        {
+            return await ControlStream.SendCommandAsync( command, token );
+        }
+
         /// <summary>
         /// Ignore any stale data we mah have waiting on the stream
         /// </summary>
