@@ -15,6 +15,8 @@
                 "MMM  d  yyyy",
                 "MMM dd HH:mm",
                 "MMM  d HH:mm",
+                "MMM dd  H:mm",
+                "MMM  d  H:mm",
                 "MM-dd-yy  hh:mmtt",
                 "MM-dd-yyyy  hh:mmtt"
             };
