@@ -15,7 +15,7 @@
                                                       @"(?<user>.+)\s+" +
                                                       @"(?<group>.+)\s+" +
                                                       @"(?<size>\d+)\s+" +
-                                                      @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s" +
+                                                      @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s+" +
                                                       @"(?<name>.*)$", RegexOptions.Compiled );
         private ILogger logger;
 
