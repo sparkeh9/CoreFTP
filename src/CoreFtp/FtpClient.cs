@@ -666,8 +666,8 @@
         {
             Logger?.LogDebug( "Disposing of FtpClient" );
             Task.WaitAny( LogOutAsync() );
-            ControlStream.Dispose();
-            dataSocketSemaphore.Dispose();
+            ControlStream?.Dispose();
+            dataSocketSemaphore?.Dispose();
         }
     }
 }
