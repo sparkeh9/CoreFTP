@@ -23,6 +23,7 @@
         [InlineData("-r-xr-xr-x   1 owner    group           14271 May  3  2:24 02001318~01488A2402001318.UHH", FtpNodeType.File, 14271, "-05-03T02:24", "02001318~01488A2402001318.UHH")]
         [InlineData("dr-xr-xr-x   1 owner    group               0 Oct 29  2013 Eycon", FtpNodeType.Directory, 0, "2013-10-29", "Eycon")]
         [InlineData("dr-xr-xr-x   1 owner    group               0 Jun  4  9:21 EYCON_40", FtpNodeType.Directory, 0, "-06-04T09:21", "EYCON_40")]
+        // Baby FTP (http://www.pablosoftwaresolutions.com/html/baby_ftp_server.html)
         [InlineData("-rwx------ 1 user group         400366 Jan 04 2011  DoncastersNo-417~816~20110103_00F1ED300000087D.uhh", FtpNodeType.File, 400366, "2011-01-04T00:00", "DoncastersNo-417~816~20110103_00F1ED300000087D.uhh")]
         public void Should_Accept(string listing, FtpNodeType nodeType, int size, string when, string filename)
         {
