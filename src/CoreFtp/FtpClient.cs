@@ -16,7 +16,7 @@
     using Infrastructure.Stream;
     using Microsoft.Extensions.Logging;
 
-    public class FtpClient : IDisposable, IFtpClient
+    public class FtpClient : IFtpClient
     {
         private IDirectoryProvider directoryProvider;
         private ILogger logger;

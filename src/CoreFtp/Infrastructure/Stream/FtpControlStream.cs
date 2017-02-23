@@ -171,16 +171,16 @@
                 throw new ArgumentNullException( nameof( encoding ) );
 
             var data = new List<byte>();
-            var buf = new byte[1];
+            var buffer = new byte[1];
             string line = null;
 
             token.ThrowIfCancellationRequested();
 
-            while ( Read( buf, 0, buf.Length ) > 0 )
+            while ( Read( buffer, 0, buffer.Length ) > 0 )
             {
                 token.ThrowIfCancellationRequested();
-                data.Add( buf[ 0 ] );
-                if ( (char) buf[ 0 ] != '\n' )
+                data.Add( buffer[ 0 ] );
+                if ( (char) buffer[ 0 ] != '\n' )
                     continue;
                 line = encoding.GetString( data.ToArray() ).Trim( '\r', '\n' );
                 break;

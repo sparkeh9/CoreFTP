@@ -6,7 +6,6 @@
             "version": "1.0.1"
         },
         "NETStandard.Library": "1.6.0",
-        "NSubstitute": "2.0.0-rc",
         "dotnet-test-xunit": "2.2.0-preview2-build1029",
         "CoreFtp": "1.2.0-*",
         "Microsoft.Extensions.Configuration": "1.0.0",
@@ -17,9 +16,10 @@
         "Microsoft.Extensions.Logging": "1.0.0",
         "Microsoft.Extensions.Logging.Console": "1.0.0",
         "Microsoft.Extensions.Logging.Debug": "1.0.0",
-        "xunit": "2.2.0-beta3-build3402",
         "AsyncFriendlyStackTrace": "1.4.1",
-        "FluentAssertions": "4.17.0"
+        "FluentAssertions": "4.19.0",
+        "NSubstitute": "2.0.1-rc",
+        "xunit": "2.2.0"
     },
     "testRunner": "xunit",
     "frameworks": {
