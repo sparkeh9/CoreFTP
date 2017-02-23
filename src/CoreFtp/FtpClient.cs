@@ -16,16 +16,16 @@
     using Infrastructure.Stream;
     using Microsoft.Extensions.Logging;
 
-    public class FtpClient : IDisposable
+    public class FtpClient : IDisposable, IFtpClient
     {
         private IDirectoryProvider directoryProvider;
         private ILogger logger;
         private Stream dataStream;
         internal readonly SemaphoreSlim dataSocketSemaphore = new SemaphoreSlim( 1, 1 );
-        public FtpClientConfiguration Configuration { get; }
+        public FtpClientConfiguration Configuration { get; private set; }
 
         internal IEnumerable<string> Features { get; private set; }
-        internal FtpControlStream ControlStream { get; }
+        internal FtpControlStream ControlStream { get; private set; }
         public bool IsConnected => ControlStream != null && ControlStream.IsConnected;
         public bool IsEncrypted => ControlStream != null && ControlStream.IsEncrypted;
         public bool IsAuthenticated { get; private set; }
@@ -41,7 +41,16 @@
             }
         }
 
+        public FtpClient()
+        {
+        }
+
         public FtpClient( FtpClientConfiguration configuration )
+        {
+            Configure(configuration);
+        }
+
+        public void Configure(FtpClientConfiguration configuration)
         {
             Configuration = configuration;
 
@@ -657,8 +666,8 @@
         {
             Logger?.LogDebug( "Disposing of FtpClient" );
             Task.WaitAny( LogOutAsync() );
-            ControlStream.Dispose();
-            dataSocketSemaphore.Dispose();
+            ControlStream?.Dispose();
+            dataSocketSemaphore?.Dispose();
         }
     }
 }

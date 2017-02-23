@@ -12,6 +12,7 @@
                 "yyyyMMddHHmmss",
                 "yyyyMMddHHmmss.fff",
                 "MMM dd  yyyy",
+                "MMM dd yyyy",
                 "MMM  d  yyyy",
                 "MMM dd HH:mm",
                 "MMM  d HH:mm",
