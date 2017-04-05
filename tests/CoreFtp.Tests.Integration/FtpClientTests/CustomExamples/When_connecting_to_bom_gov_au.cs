@@ -11,7 +11,7 @@
     {
         public When_connecting_to_bom_gov_au( ITestOutputHelper outputHelper ) : base( outputHelper ) { }
 
-        [ Fact(  ) ]
+        [ Fact( Skip = "Example") ]
         public async Task Should_give_directory_listing()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
