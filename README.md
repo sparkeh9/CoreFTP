@@ -14,7 +14,7 @@ CoreFTP Supports and includes compiled binaries for:
 - .NET Framework 4.5.2 and above
 
 
-###Usage###
+### Usage ###
 Usage of this small library was intended to be as simple as possible. The integration test suite provides various example of basic FTP usage.
 
 #### Connecting to an FTP/S server ####
@@ -35,7 +35,7 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
 
 ```
 
-####Downloading a file to a filestream on local disk ####
+#### Downloading a file to a filestream on local disk ####
 
 ```
 using ( var ftpClient = new FtpClient( new FtpClientConfiguration
@@ -80,5 +80,5 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
 
 ```
 
-###Integration Tests ###
+### Integration Tests ###
 Integration tests can be run against most FTP servers with passive mode enabled, credentials can be configured in appsettings.json of CoreFtp.Tests.Integration.
