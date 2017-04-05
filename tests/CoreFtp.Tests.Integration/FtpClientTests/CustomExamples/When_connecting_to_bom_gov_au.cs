@@ -1,5 +1,6 @@
 ﻿namespace CoreFtp.Tests.Integration.FtpClientTests.CustomExamples
 {
+    using System.Linq;
     using System.Threading.Tasks;
     using Enum;
     using FluentAssertions;
@@ -10,7 +11,7 @@
     {
         public When_connecting_to_bom_gov_au( ITestOutputHelper outputHelper ) : base( outputHelper ) { }
 
-        [ Fact( Skip = "Example code" ) ]
+        [ Fact(  ) ]
         public async Task Should_give_directory_listing()
         {
             using ( var sut = new FtpClient( new FtpClientConfiguration
@@ -20,12 +21,13 @@
                 Password = "guest",
                 Port = 21,
                 EncryptionType = FtpEncryption.None,
-                IgnoreCertificateErrors = true
+                IgnoreCertificateErrors = true,
+                BaseDirectory = "/anon/gen/fwo/"
             } ) )
             {
                 sut.Logger = Logger;
                 await sut.LoginAsync();
-                var directoryListing = await sut.ListDirectoriesAsync();
+                var directoryListing = await sut.ListAllAsync();
 
                 directoryListing.Count.Should().BeGreaterThan( 0 );
             }
