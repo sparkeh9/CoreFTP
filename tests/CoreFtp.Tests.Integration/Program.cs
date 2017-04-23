@@ -1,8 +1,6 @@
 ﻿namespace CoreFtp.Tests.Integration
 {
     using System;
-    using System.Diagnostics;
-    using System.Threading;
     using Logger;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;

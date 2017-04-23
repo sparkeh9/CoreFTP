@@ -260,7 +260,7 @@
                 token.ThrowIfCancellationRequested();
                 if ( !SocketDataAvailable() )
                 {
-                    Logger?.LogWarning( "Response expected, but no data exists on the socket" );
+                    Logger?.LogDebug( "Response expected, but no data exists on the socket" );
                 }
 
                 var response = new FtpResponse();

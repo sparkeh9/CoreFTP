@@ -41,21 +41,25 @@
             }
         }
 
-        public FtpClient()
-        {
-        }
+        public FtpClient() { }
 
         public FtpClient( FtpClientConfiguration configuration )
         {
-            Configure(configuration);
+            Configure( configuration );
         }
 
-        public void Configure(FtpClientConfiguration configuration)
+        public void Configure( FtpClientConfiguration configuration )
         {
             Configuration = configuration;
 
             if ( configuration.Host == null )
                 throw new ArgumentNullException( nameof( configuration.Host ) );
+
+            if ( Uri.IsWellFormedUriString( configuration.Host, UriKind.Absolute ) )
+            {
+                configuration.Host = new Uri( configuration.Host ).Host;
+            }
+
 
             ControlStream = new FtpControlStream( Configuration, new DnsResolver() );
             Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
@@ -325,7 +329,7 @@
         /// </summary>
         /// <param name="ctsToken"></param>
         /// <returns></returns>
-        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default( CancellationToken ) )
+        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default(CancellationToken) )
         {
             Logger?.LogDebug( "[FtpClient] Closing write file stream" );
             dataStream.Dispose();
@@ -639,12 +643,12 @@
             }
         }
 
-        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope, CancellationToken token = default( CancellationToken ) )
+        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope, CancellationToken token = default(CancellationToken) )
         {
             return await ControlStream.SendCommandAsync( envelope, token );
         }
 
-        public async Task<FtpResponse> SendCommandAsync( string command, CancellationToken token = default( CancellationToken ) )
+        public async Task<FtpResponse> SendCommandAsync( string command, CancellationToken token = default(CancellationToken) )
         {
             return await ControlStream.SendCommandAsync( command, token );
         }

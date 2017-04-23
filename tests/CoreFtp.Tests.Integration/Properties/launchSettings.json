@@ -1,0 +1,7 @@
+{
+  "profiles": {
+    "CoreFtp.Tests.Integration": {
+      "commandName": "Project"
+    }
+  }
+}
