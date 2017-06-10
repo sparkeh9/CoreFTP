@@ -21,8 +21,8 @@
         public static void Initialise( ITestOutputHelper outputHelper = null )
         {
             LoggerFactory = new LoggerFactory()
-                .AddXunitConsole( outputHelper )
-                .AddDebug( LogLevel.Debug );
+                .AddXunitConsole( outputHelper, LogLevel.Debug )
+                .AddDebug( LogLevel.Error );
 
             var builder = new ConfigurationBuilder()
                 .SetBasePath( AppContext.BaseDirectory )

@@ -1,6 +1,7 @@
 ﻿namespace CoreFtp.Tests.Integration.Logger
 {
     using System;
+    using System.Diagnostics;
     using Microsoft.Extensions.Logging;
     using Xunit.Abstractions;
 
@@ -46,6 +47,7 @@
             }
 
             outputHelper.WriteLine( message );
+            Debug.WriteLine( message );
         }
     }
 }

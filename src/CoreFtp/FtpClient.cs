@@ -131,10 +131,10 @@
         public async Task LogOutAsync()
         {
             await IgnoreStaleData();
-            Logger?.LogDebug( "[FtpClient] Logging out" );
             if ( !IsConnected )
                 return;
 
+            Logger?.LogTrace( "[FtpClient] Logging out" );
             await ControlStream.SendCommandAsync( FtpCommand.QUIT );
             ControlStream.Disconnect();
             IsAuthenticated = false;
@@ -147,7 +147,7 @@
         /// <returns></returns>
         public async Task ChangeWorkingDirectoryAsync( string directory )
         {
-            Logger?.LogDebug( $"[FtpClient] changing directory to {directory}" );
+            Logger?.LogTrace( $"[FtpClient] changing directory to {directory}" );
             if ( directory.IsNullOrWhiteSpace() || directory.Equals( "." ) )
                 throw new ArgumentOutOfRangeException( nameof( directory ), "Directory supplied was incorrect" );
 
@@ -329,12 +329,13 @@
         /// </summary>
         /// <param name="ctsToken"></param>
         /// <returns></returns>
-        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default(CancellationToken) )
+        public async Task CloseFileDataStreamAsync( CancellationToken ctsToken = default( CancellationToken ) )
         {
-            Logger?.LogDebug( "[FtpClient] Closing write file stream" );
+            Logger?.LogTrace( "[FtpClient] Closing write file stream" );
             dataStream.Dispose();
 
-            await ControlStream.GetResponseAsync( ctsToken );
+            if ( ControlStream != null )
+                await ControlStream.GetResponseAsync( ctsToken );
         }
 
         /// <summary>
@@ -420,7 +421,7 @@
         public async Task SetTransferMode( FtpTransferMode transferMode, char secondType = '\0' )
         {
             EnsureLoggedIn();
-            Logger?.LogDebug( $"[FtpClient] Setting transfer mode {transferMode}, {secondType}" );
+            Logger?.LogTrace( $"[FtpClient] Setting transfer mode {transferMode}, {secondType}" );
             var response = await ControlStream.SendCommandAsync( new FtpCommandEnvelope
             {
                 FtpCommand = FtpCommand.TYPE,
@@ -461,7 +462,7 @@
         /// <returns></returns>
         private IDirectoryProvider DetermineDirectoryProvider()
         {
-            Logger?.LogDebug( "[FtpClient] Determining directory provider" );
+            Logger?.LogTrace( "[FtpClient] Determining directory provider" );
             if ( this.UsesMlsd() )
                 return new MlsdDirectoryProvider( this, Logger, Configuration );
 
@@ -471,7 +472,7 @@
         private async Task<IEnumerable<string>> DetermineFeaturesAsync()
         {
             EnsureLoggedIn();
-            Logger?.LogDebug( "[FtpClient] Determining features" );
+            Logger?.LogTrace( "[FtpClient] Determining features" );
             var response = await ControlStream.SendCommandAsync( FtpCommand.FEAT );
 
             if ( response.FtpStatusCode == FtpStatusCode.CommandSyntaxError || response.FtpStatusCode == FtpStatusCode.CommandNotImplemented )
@@ -584,21 +585,24 @@
         /// <returns></returns>
         internal async Task<Stream> ConnectDataStreamAsync()
         {
-            Logger?.LogDebug( "[FtpClient] Connecting to a data socket" );
+            Logger?.LogTrace( "[FtpClient] Connecting to a data socket" );
+
             var epsvResult = await ControlStream.SendCommandAsync( FtpCommand.EPSV );
 
             int? passivePortNumber;
-            if ( epsvResult.FtpStatusCode != FtpStatusCode.EnteringExtendedPassive )
+            if ( epsvResult.FtpStatusCode == FtpStatusCode.EnteringExtendedPassive )
             {
-                // Try with passive in case extended passive fails
+                passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
+            }
+            else
+            {
+                // EPSV failed - try regular PASV
                 var pasvResult = await ControlStream.SendCommandAsync( FtpCommand.PASV );
                 if ( pasvResult.FtpStatusCode != FtpStatusCode.EnteringPassive )
                     throw new FtpException( pasvResult.ResponseMessage );
 
                 passivePortNumber = pasvResult.ResponseMessage.ExtractPasvPortNumber();
             }
-            else
-                passivePortNumber = epsvResult.ResponseMessage.ExtractEpsvPortNumber();
 
             if ( !passivePortNumber.HasValue )
                 throw new FtpException( "Could not determine EPSV/PASV data port" );
@@ -643,12 +647,12 @@
             }
         }
 
-        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope, CancellationToken token = default(CancellationToken) )
+        public async Task<FtpResponse> SendCommandAsync( FtpCommandEnvelope envelope, CancellationToken token = default( CancellationToken ) )
         {
             return await ControlStream.SendCommandAsync( envelope, token );
         }
 
-        public async Task<FtpResponse> SendCommandAsync( string command, CancellationToken token = default(CancellationToken) )
+        public async Task<FtpResponse> SendCommandAsync( string command, CancellationToken token = default( CancellationToken ) )
         {
             return await ControlStream.SendCommandAsync( command, token );
         }

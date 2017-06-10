@@ -171,7 +171,7 @@
                 throw new ArgumentNullException( nameof( encoding ) );
 
             var data = new List<byte>();
-            var buffer = new byte[1];
+            var buffer = new byte[ 1 ];
             string line = null;
 
             token.ThrowIfCancellationRequested();
@@ -248,7 +248,7 @@
 
         public async Task<FtpResponse> GetResponseAsync( CancellationToken token = default( CancellationToken ) )
         {
-            Logger?.LogDebug( "Getting Response" );
+            Logger?.LogTrace( "Getting Response" );
 
             if ( Encoding == null )
                 throw new ArgumentNullException( nameof( Encoding ) );
@@ -258,10 +258,6 @@
             try
             {
                 token.ThrowIfCancellationRequested();
-                if ( !SocketDataAvailable() )
-                {
-                    Logger?.LogDebug( "Response expected, but no data exists on the socket" );
-                }
 
                 var response = new FtpResponse();
                 var data = new List<string>();
@@ -276,7 +272,7 @@
 
                     if ( !( match = Regex.Match( line, "^(?<statusCode>[0-9]{3}) (?<message>.*)$" ) ).Success )
                         continue;
-                    Logger?.LogDebug( "Finished receiving message" );
+                    Logger?.LogTrace( "Finished receiving message" );
                     response.FtpStatusCode = match.Groups[ "statusCode" ].Value.ToStatusCode();
                     response.ResponseMessage = match.Groups[ "message" ].Value;
                     break;
@@ -366,8 +362,10 @@
                 {
                     ReceiveTimeout = Configuration.TimeoutSeconds * 1000
                 };
+//                socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+//                socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true );
                 socket.Connect( ipEndpoint );
-                socket.SetSocketOption( SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true );
+                socket.LingerState = new LingerOption( true, 0 );
                 return socket;
             }
             catch ( Exception exception )
@@ -433,12 +431,12 @@
 
         public void Disconnect()
         {
-            Logger?.LogDebug( "Disconnecting" );
+            Logger?.LogTrace( "Disconnecting" );
             try
             {
-                Socket?.Shutdown( SocketShutdown.Both );
                 BaseStream?.Dispose();
                 SslStream?.Dispose();
+                Socket?.Shutdown( SocketShutdown.Both );
             }
             catch ( Exception exception )
             {
@@ -453,7 +451,7 @@
 
         protected override void Dispose( bool disposing )
         {
-            Logger?.LogDebug( IsDataConnection ? "Disposing of data connection" : "Disposing of control connection" );
+            Logger?.LogTrace( IsDataConnection ? "Disposing of data connection" : "Disposing of control connection" );
 
             if ( disposing )
             {

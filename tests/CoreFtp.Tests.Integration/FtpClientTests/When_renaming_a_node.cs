@@ -28,7 +28,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                     ? 990
                     : Program.FtpConfiguration.Port,
                 EncryptionType = encryption,
-                IgnoreCertificateErrors = true
+                IgnoreCertificateErrors = true,
+                TimeoutSeconds = 20
             } ) )
             {
                 sut.Logger = Logger;
