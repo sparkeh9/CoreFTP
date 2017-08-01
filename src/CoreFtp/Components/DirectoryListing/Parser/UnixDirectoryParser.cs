@@ -1,4 +1,6 @@
-﻿namespace CoreFtp.Components.DirectoryListing.Parser
+﻿using System.Collections.Generic;
+
+namespace CoreFtp.Components.DirectoryListing.Parser
 {
     using System;
     using System.Globalization;
@@ -10,13 +12,26 @@
 
     public class UnixDirectoryParser : IListDirectoryParser
     {
-        private readonly Regex unixRegex = new Regex( @"(?<permissions>.+)\s+" +
-                                                      @"(?<objectcount>\d+)\s+" +
-                                                      @"(?<user>.+)\s+" +
-                                                      @"(?<group>.+)\s+" +
-                                                      @"(?<size>\d+)\s+" +
-                                                      @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s+" +
-                                                      @"(?<name>.*)$", RegexOptions.Compiled );
+        private readonly List<Regex> unixRegexList = new List<Regex>()
+        {
+            new Regex(@"(?<permissions>.+)\s+" +
+                      @"(?<objectcount>\d+)\s+" +
+                      @"(?<user>.+)\s+" +
+                      @"(?<group>.+)\s+" +
+                      @"(?<size>\d+)\s+" +
+                      @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s+" +
+                      @"(?<name>.*)$", RegexOptions.Compiled),
+
+            // Non-standard StingRay FTP Server
+
+            new Regex(@"(?<permissions>.+)\s+" +
+                      @"(?<objectcount>\d+)\s+" +
+                      @"(?<size>\d+)\s+" +
+                      @"(?<date>\w+\s+\d+\s+\d+:\d+|\w+\s+\d+\s+\d+)\s+" +
+                      @"(?<name>.*)$", RegexOptions.Compiled)
+
+        };
+
         private ILogger logger;
 
         public UnixDirectoryParser(ILogger logger)
@@ -26,12 +41,23 @@
 
         public bool Test( string testString )
         {
-            return unixRegex.Match( testString ).Success;
+            foreach (var expression in unixRegexList)
+            {
+                if (expression.Match(testString).Success) return true;
+            }
+
+            return false;
         }
 
         public FtpNodeInformation Parse( string line )
         {
-            var matches = unixRegex.Match( line );
+            var matches = Match.Empty;
+            foreach (var expression in unixRegexList)
+            {
+                if (!expression.Match(line).Success) continue;
+                matches = expression.Match(line);
+                break;
+            }
 
             if ( !matches.Success )
                 return null;
