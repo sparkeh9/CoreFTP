@@ -11,13 +11,13 @@ before_build:
 - ps: dotnet restore
 build:
   project: CoreFtp.sln
-  publish_nuget: true
-  publish_nuget_symbols: true
-  include_nuget_references: true
+  publish_nuget: false
+  publish_nuget_symbols: false
+  include_nuget_references: false
   parallel: true
   verbosity: minimal
 after_build:
-- ps: dotnet pack --no-build --configuration Release
+- ps: dotnet pack src\CoreFTP\CoreFTP.csproj --no-build --configuration Release
 test: off
 artifacts:
-- path: src\CoreFtp\bin\Release\CoreFtp.%APPVEYOR_BUILD_VERSION%.nupkg
+- path: src\CoreFtp\bin\Release\CoreFtp.*.nupkg
