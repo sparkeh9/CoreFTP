@@ -18,6 +18,7 @@
     <Version>0.0.0.0</Version>
     <Authors />
     <Description />
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
 
   <ItemGroup>
