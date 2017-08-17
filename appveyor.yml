@@ -17,7 +17,7 @@ build:
   parallel: true
   verbosity: minimal
 after_build:
-- ps: dotnet pack src\CoreFTP\CoreFTP.csproj --no-build --configuration Release
+- ps: dotnet pack --no-build --configuration Release
 test: off
 artifacts:
-- path: src\CoreFtp\bin\Release\CoreFtp.*.nupkg
+- path: src\CoreFtp\bin\Release\CoreFtp.%APPVEYOR_BUILD_VERSION%.nupkg
