@@ -8,7 +8,7 @@ using Xunit;
 
 [ assembly: AssemblyConfiguration( "" ) ]
 [ assembly: AssemblyCompany( "" ) ]
-[ assembly: AssemblyProduct( "CoreFtp.Tests.Integration" ) ]
+[ assembly: AssemblyProduct( "" ) ]
 [ assembly: AssemblyTrademark( "" ) ]
 
 // Setting ComVisible to false makes the types in this assembly not visible
