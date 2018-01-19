@@ -46,7 +46,7 @@ namespace CoreFtp.Infrastructure.Stream
             }
             catch ( Exception e )
             {
-                Logger?.LogWarning( "Closing the data stream took longer than expected", e );
+                Logger?.LogWarning( e, "Closing the data stream took longer than expected" );
             }
             finally
             {
