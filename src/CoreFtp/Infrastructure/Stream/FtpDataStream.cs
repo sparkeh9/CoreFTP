@@ -41,7 +41,10 @@ namespace CoreFtp.Infrastructure.Stream
             {
                 encapsulatedStream.Dispose();
 
-                client.ControlStream.SetTimeouts( 100 );
+                if ( client.Configuration.DisconnectTimeoutMilliseconds.HasValue )
+                {
+                    client.ControlStream.SetTimeouts( client.Configuration.DisconnectTimeoutMilliseconds.Value );
+                }
                 client.CloseFileDataStreamAsync().Wait();
             }
             catch ( Exception e )
