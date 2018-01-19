@@ -658,7 +658,7 @@
         }
 
         /// <summary>
-        /// Ignore any stale data we mah have waiting on the stream
+        /// Ignore any stale data we may have waiting on the stream
         /// </summary>
         /// <returns></returns>
         private async Task IgnoreStaleData()
