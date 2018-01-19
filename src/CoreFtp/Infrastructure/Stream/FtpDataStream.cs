@@ -41,7 +41,7 @@ namespace CoreFtp.Infrastructure.Stream
             {
                 encapsulatedStream.Dispose();
 
-                if (client.Configuration.DisconnectTimeoutMilliseconds.HasValue)
+                if ( client.Configuration.DisconnectTimeoutMilliseconds.HasValue )
                 {
                     client.ControlStream.SetTimeouts( client.Configuration.DisconnectTimeoutMilliseconds.Value );
                 }
