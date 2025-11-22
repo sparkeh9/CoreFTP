@@ -317,19 +317,12 @@
 
                 if ( IsDataConnection )
                 {
-                    if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Explicit )
-                    {
-                        await ActivateEncryptionAsync();
-                    }
-
                     return;
                 }
-                else
+
+                if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Implicit )
                 {
-                    if ( Configuration.ShouldEncrypt && Configuration.EncryptionType == FtpEncryption.Implicit )
-                    {
-                        await ActivateEncryptionAsync();
-                    }
+                    await ActivateEncryptionAsync();
                 }
 
                 Logger?.LogDebug( "Waiting for welcome message" );
