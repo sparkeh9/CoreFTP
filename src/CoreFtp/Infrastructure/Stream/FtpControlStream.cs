@@ -140,6 +140,15 @@
             return 1;
         }
 
+        public override int ReadByte()
+        {
+            if ( NetworkStream == null )
+                return -1;
+
+            var bytesRead = NetworkStream.Read( readByteBuffer, 0, 1 );
+            return bytesRead == 0 ? -1 : readByteBuffer[ 0 ];
+        }
+
         private int Read( Span<byte> buffer )
         {
             if ( buffer.IsEmpty )
