@@ -140,6 +140,19 @@
             return 1;
         }
 
+        private int Read( Span<byte> buffer )
+        {
+            if ( buffer.IsEmpty )
+                return 0;
+
+            var value = ReadByte();
+            if ( value == -1 )
+                return 0;
+
+            buffer[ 0 ] = (byte) value;
+            return 1;
+        }
+
 
         public override void Write(byte[] buffer, int offset, int count)
         {
