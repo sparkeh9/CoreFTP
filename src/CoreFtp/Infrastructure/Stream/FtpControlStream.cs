@@ -111,6 +111,19 @@
             return NetworkStream?.Read( buffer, offset, count ) ?? 0;
         }
 
+        private int Read( Span<byte> buffer )
+        {
+            if ( buffer.IsEmpty )
+                return 0;
+
+            var value = ReadByte();
+            if ( value == -1 )
+                return 0;
+
+            buffer[ 0 ] = (byte) value;
+            return 1;
+        }
+
 
         public override void Write( byte[] buffer, int offset, int count )
         {
@@ -171,12 +184,12 @@
                 throw new ArgumentNullException( nameof( encoding ) );
 
             var data = new List<byte>();
-            var buffer = new byte[ 1 ];
+            Span<byte> buffer = stackalloc byte[ 1 ];
             string line = null;
 
             token.ThrowIfCancellationRequested();
 
-            while ( Read( buffer, 0, buffer.Length ) > 0 )
+            while ( Read( buffer ) > 0 )
             {
                 token.ThrowIfCancellationRequested();
                 data.Add( buffer[ 0 ] );
