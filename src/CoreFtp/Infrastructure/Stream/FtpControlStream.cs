@@ -23,6 +23,7 @@
         protected readonly IDnsResolver dnsResolver;
         protected Socket Socket;
         protected Stream BaseStream;
+        private readonly byte[] readByteBuffer = new byte[ 1 ];
 
         protected Stream NetworkStream => SslStream ?? BaseStream;
         protected SslStream SslStream { get; set; }
@@ -109,6 +110,15 @@
         public override int Read( byte[] buffer, int offset, int count )
         {
             return NetworkStream?.Read( buffer, offset, count ) ?? 0;
+        }
+
+        public override int ReadByte()
+        {
+            if ( NetworkStream == null )
+                return -1;
+
+            var bytesRead = NetworkStream.Read( readByteBuffer, 0, 1 );
+            return bytesRead == 0 ? -1 : readByteBuffer[ 0 ];
         }
 
         private int Read( Span<byte> buffer )
