@@ -8,6 +8,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using System.Threading.Tasks;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
+    using Shared;
     using Xunit;
     using Xunit.Abstractions;
 
@@ -45,7 +46,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
         }
 
         [Fact]
-        public async Task ChangeWorkingDirectoryAsync_ThrowsIndexOutOfRangeException_WhenPwdResponseLacksQuotes()
+        public async Task ChangeWorkingDirectoryAsync_DoesNotThrow_WhenPwdResponseLacksQuotes()
         {
             var serverTask = RunFakeFtpServer(async (reader, writer) =>
             {
@@ -112,42 +113,6 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
             }
 
             await serverTask;
-        }
-    }
-
-    // Quick xunit logger provider
-    public class XunitLoggerProvider : ILoggerProvider
-    {
-        private readonly ITestOutputHelper _output;
-
-        public XunitLoggerProvider(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
-        public ILogger CreateLogger(string categoryName) => new XunitLogger(_output);
-
-        public void Dispose()
-        {
-        }
-    }
-
-    public class XunitLogger : ILogger
-    {
-        private readonly ITestOutputHelper _output;
-
-        public XunitLogger(ITestOutputHelper output)
-        {
-            _output = output;
-        }
-
-        public IDisposable BeginScope<TState>(TState state) => null;
-        public bool IsEnabled(LogLevel logLevel) => true;
-
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
-            Func<TState, Exception, string> formatter)
-        {
-            _output.WriteLine(formatter(state, exception));
         }
     }
 }

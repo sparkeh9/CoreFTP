@@ -8,6 +8,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using System.Threading.Tasks;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
+    using Shared;
     using Xunit;
     using Xunit.Abstractions;
 
@@ -19,9 +20,10 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
         public DisposeTests(ITestOutputHelper outputHelper)
         {
-            var factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder => builder.AddProvider(new XunitLoggerProvider(outputHelper)));
+            var factory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+                builder.AddProvider(new XunitLoggerProvider(outputHelper)));
             _logger = factory.CreateLogger<DisposeTests>();
-            
+
             _listener = new TcpListener(IPAddress.Loopback, 0);
             _listener.Start();
             _port = ((IPEndPoint)_listener.LocalEndpoint).Port;
@@ -54,6 +56,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                 await reader.ReadLineAsync(); // PASS
                 await writer.WriteLineAsync("230 Logged in");
                 await reader.ReadLineAsync(); // FEAT
+                await writer.WriteLineAsync("211-Features:");
+                await writer.WriteLineAsync(" UTF8");
                 await writer.WriteLineAsync("211 End");
                 await reader.ReadLineAsync(); // OPTS UTF8
                 await writer.WriteLineAsync("200 OK");
@@ -79,7 +83,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
             var client = new FtpClient(config) { Logger = _logger };
             await client.LoginAsync();
-            
+
             // Dispose calls Task.WaitAny(LogOutAsync()) which shouldn't throw,
             // but under the hood, we are fixing it so Dispose catches the exception
             // properly. Before the fix, WaitAny would swallow it *if* it returned immediately,
@@ -87,7 +91,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
             // By wrapping in an action we ensure no exception is thrown out of Dispose.
             Action act = () => client.Dispose();
             act.Should().NotThrow();
-            
+
             await serverTask;
         }
     }

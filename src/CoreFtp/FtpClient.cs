@@ -707,7 +707,10 @@
                     LogOutAsync().GetAwaiter().GetResult();
                 }
             } 
-            catch { }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(0, ex, "Exception during logout on dispose.");
+            }
             
             dataStream?.Dispose();
             ControlStream?.Dispose();

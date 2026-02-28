@@ -47,3 +47,5 @@ cross/rootfs/
 *DS_Store
 project.lock.json
 
+estorer_log.txt
+build_log.txt

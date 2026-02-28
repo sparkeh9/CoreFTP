@@ -8,6 +8,7 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
     using System.Threading.Tasks;
     using FluentAssertions;
     using Microsoft.Extensions.Logging;
+    using Shared;
     using Xunit;
     using Xunit.Abstractions;
 
@@ -55,6 +56,8 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
                 await reader.ReadLineAsync(); // PASS
                 await writer.WriteLineAsync("230 Logged in");
                 await reader.ReadLineAsync(); // FEAT
+                await writer.WriteLineAsync("211-Features:");
+                await writer.WriteLineAsync(" UTF8");
                 await writer.WriteLineAsync("211 End");
                 await reader.ReadLineAsync(); // OPTS UTF8
                 await writer.WriteLineAsync("200 OK");

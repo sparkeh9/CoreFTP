@@ -140,27 +140,7 @@
             return 1;
         }
 
-        public override int ReadByte()
-        {
-            if ( NetworkStream == null )
-                return -1;
 
-            var bytesRead = NetworkStream.Read( readByteBuffer, 0, 1 );
-            return bytesRead == 0 ? -1 : readByteBuffer[ 0 ];
-        }
-
-        private int Read( Span<byte> buffer )
-        {
-            if ( buffer.IsEmpty )
-                return 0;
-
-            var value = ReadByte();
-            if ( value == -1 )
-                return 0;
-
-            buffer[ 0 ] = (byte) value;
-            return 1;
-        }
 
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -212,6 +192,9 @@
 
         protected async Task WriteLineAsync(string buf)
         {
+            if (buf.Contains("\r") || buf.Contains("\n"))
+                throw new ArgumentException("Command parameters cannot contain CRLF characters", nameof(buf));
+
             var data = Encoding.GetBytes($"{buf}\r\n");
             await WriteAsync(data, 0, data.Length, CancellationToken.None);
         }
@@ -227,12 +210,18 @@
 
             token.ThrowIfCancellationRequested();
 
+            const int maxLineLength = 4096;
+
             while (Read(buffer) > 0)
             {
                 token.ThrowIfCancellationRequested();
                 data.Add(buffer[0]);
                 if ((char)buffer[0] != '\n')
+                {
+                    if (data.Count > maxLineLength)
+                        throw new FtpException("Line length limit exceeded");
                     continue;
+                }
                 line = encoding.GetString(data.ToArray()).Trim('\r', '\n');
                 break;
             }
