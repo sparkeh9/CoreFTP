@@ -135,9 +135,19 @@
                 return;
 
             Logger?.LogTrace( "[FtpClient] Logging out" );
-            await ControlStream.SendCommandAsync( FtpCommand.QUIT );
-            ControlStream.Disconnect();
-            IsAuthenticated = false;
+            try 
+            {
+                await ControlStream.SendCommandAsync( FtpCommand.QUIT );
+            } 
+            catch (Exception e) 
+            {
+                Logger?.LogWarning( 0, e, "Error sending QUIT command during logout" );
+            }
+            finally 
+            {
+                ControlStream.Disconnect();
+                IsAuthenticated = false;
+            }
         }
 
         /// <summary>
@@ -164,10 +174,27 @@
 
             var pwdResponse = await ControlStream.SendCommandAsync( FtpCommand.PWD );
 
-            if ( !response.IsSuccess )
-                throw new FtpException( response.ResponseMessage );
+            if ( !pwdResponse.IsSuccess )
+                throw new FtpException( pwdResponse.ResponseMessage );
 
-            WorkingDirectory = pwdResponse.ResponseMessage.Split( '"' )[ 1 ];
+            WorkingDirectory = ParseWorkingDirectory( pwdResponse.ResponseMessage );
+        }
+
+        private string ParseWorkingDirectory(string responseMessage)
+        {
+            var parts = responseMessage.Split('"');
+            if (parts.Length >= 2)
+            {
+                return parts[1];
+            }
+            
+            // Fallback for unquoted PWD responses like: /home/user is current directory
+            var firstSpace = responseMessage.IndexOf(' ');
+            if (firstSpace != -1)
+            {
+                return responseMessage.Substring(0, firstSpace);
+            }
+            return responseMessage;
         }
 
         /// <summary>
@@ -673,7 +700,19 @@
         public void Dispose()
         {
             Logger?.LogDebug( "Disposing of FtpClient" );
-            Task.WaitAny( LogOutAsync() );
+            try 
+            {
+                if (IsConnected)
+                {
+                    LogOutAsync().GetAwaiter().GetResult();
+                }
+            } 
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(0, ex, "Exception during logout on dispose.");
+            }
+            
+            dataStream?.Dispose();
             ControlStream?.Dispose();
             dataSocketSemaphore?.Dispose();
         }
