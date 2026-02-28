@@ -20,9 +20,12 @@
 
         public static void Initialise( ITestOutputHelper outputHelper = null )
         {
-            LoggerFactory = new LoggerFactory()
-                .AddXunitConsole( outputHelper, LogLevel.Debug )
-                .AddDebug( LogLevel.Error );
+            LoggerFactory = Microsoft.Extensions.Logging.LoggerFactory.Create(builder =>
+            {
+                builder.AddDebug();
+                builder.SetMinimumLevel(LogLevel.Debug);
+            });
+            LoggerFactory.AddXunitConsole( outputHelper, LogLevel.Debug );
 
             var builder = new ConfigurationBuilder()
                 .SetBasePath( AppContext.BaseDirectory )

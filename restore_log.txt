@@ -1,0 +1,64 @@
+  Determining projects to restore...
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : warning NU1903: Package 'Microsoft.NETCore.App' 1.0.5 has a known high severity vulnerability, https://github.com/advisories/GHSA-7mfr-774f-w5r9
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : warning NU1903: Package 'Microsoft.NETCore.App' 1.0.5 has a known high severity vulnerability, https://github.com/advisories/GHSA-8884-xcr4-r68p
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package xunit.runner.visualstudio 3.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package xunit.runner.visualstudio 3.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net472 (.NETFramework,Version=v4.7.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net6.0 (.NETCoreApp,Version=v6.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Configuration 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Configuration 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Configuration.FileExtensions 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Configuration.FileExtensions 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Configuration.Json 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Configuration.Json 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.1 (.NETStandard,Version=v2.1)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.DependencyInjection 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.DependencyInjection 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.1 (.NETStandard,Version=v2.1)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Configuration.Binder 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Configuration.Binder 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Logging 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Logging 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.1 (.NETStandard,Version=v2.1)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Logging.Console 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Logging.Console 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package Microsoft.Extensions.Logging.Debug 9.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package Microsoft.Extensions.Logging.Debug 9.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net8.0 (.NETCoreApp,Version=v8.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net9.0 (.NETCoreApp,Version=v9.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package FluentAssertions 7.0.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package FluentAssertions 7.0.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net47 (.NETFramework,Version=v4.7)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net6.0 (.NETCoreApp,Version=v6.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.1 (.NETStandard,Version=v2.1)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202: Package NSubstitute 5.3.0 is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Package NSubstitute 5.3.0 supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - net6.0 (.NETCoreApp,Version=v6.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1202:   - netstandard2.0 (.NETStandard,Version=v2.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1201: Project CoreFtp is not compatible with netcoreapp1.0 (.NETCoreApp,Version=v1.0). Project CoreFtp supports:
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1201:   - net10.0 (.NETCoreApp,Version=v10.0)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1201:   - net462 (.NETFramework,Version=v4.6.2)
+d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj : error NU1201:   - netstandard2.0 (.NETStandard,Version=v2.0)
+  Failed to restore d:\code\oss\CoreFTP\tests\CoreFtp.Tests.Integration\CoreFtp.Tests.Integration.csproj (in 239 ms).
+  1 of 2 projects are up-to-date for restore.
