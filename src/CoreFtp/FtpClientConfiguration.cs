@@ -25,6 +25,6 @@
                                      Port == Constants.FtpsPort;
 
         public X509CertificateCollection ClientCertificates { get; set; } = new X509CertificateCollection();
-        public SslProtocols SslProtocols { get; set; } = SslProtocols.Tls | SslProtocols.Tls11 | SslProtocols.Tls12;
+        public SslProtocols SslProtocols { get; set; } = SslProtocols.None;
     }
 }

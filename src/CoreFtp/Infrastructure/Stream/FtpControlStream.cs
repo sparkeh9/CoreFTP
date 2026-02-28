@@ -123,7 +123,11 @@
             return bytesRead == 0 ? -1 : readByteBuffer[0];
         }
 
+#if NETSTANDARD2_0 || NET462
         private int Read(Span<byte> buffer)
+#else
+        private new int Read(Span<byte> buffer)
+#endif
         {
             if (buffer.IsEmpty)
                 return 0;
