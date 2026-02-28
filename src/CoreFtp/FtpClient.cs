@@ -60,8 +60,10 @@
                 configuration.Host = new Uri( configuration.Host ).Host;
             }
 
-
-            ControlStream = new FtpControlStream( Configuration, new DnsResolver() );
+            ControlStream = new FtpControlStream( Configuration, new DnsResolver() )
+            {
+                Encoding = Configuration.BaseEncoding
+            };
             Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
 
@@ -490,6 +492,20 @@
         private IDirectoryProvider DetermineDirectoryProvider()
         {
             Logger?.LogTrace( "[FtpClient] Determining directory provider" );
+
+            if ( Configuration.ForceFileSystem.HasValue )
+            {
+                var forcedProvider = new ListDirectoryProvider( this, Logger, Configuration );
+                forcedProvider.ClearParsers();
+                
+                if ( Configuration.ForceFileSystem.Value == FtpFileSystemType.Windows )
+                    forcedProvider.AddParser( new Components.DirectoryListing.Parser.DosDirectoryParser( Logger ) );
+                else
+                    forcedProvider.AddParser( new Components.DirectoryListing.Parser.UnixDirectoryParser( Logger ) );
+                
+                return forcedProvider;
+            }
+
             if ( this.UsesMlsd() )
                 return new MlsdDirectoryProvider( this, Logger, Configuration );
 

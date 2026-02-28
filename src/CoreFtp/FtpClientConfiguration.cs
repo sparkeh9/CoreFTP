@@ -1,5 +1,7 @@
 ﻿namespace CoreFtp
 {
+    using System;
+    using System.Net.Security;
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
     using Enum;
@@ -26,5 +28,20 @@
 
         public X509CertificateCollection ClientCertificates { get; set; } = new X509CertificateCollection();
         public SslProtocols SslProtocols { get; set; } = SslProtocols.None;
+
+        /// <summary>
+        /// Base encoding to use for the control stream. Useful for legacy servers that use Shift_JIS, GBK, etc.
+        /// </summary>
+        public System.Text.Encoding BaseEncoding { get; set; } = System.Text.Encoding.ASCII;
+
+        /// <summary>
+        /// Allows overriding the server certificate validation logic (e.g., verifying a specific self-signed certificate thumbprint).
+        /// </summary>
+        public Func<X509Certificate, X509Chain, SslPolicyErrors, bool> ServerCertificateValidationCallback { get; set; }
+
+        /// <summary>
+        /// Allows overriding the OS directory provider. Useful if the server does not report its OS in FEAT (e.g. FtpFileSystemType.Windows).
+        /// </summary>
+        public FtpFileSystemType? ForceFileSystem { get; set; }
     }
 }

@@ -26,6 +26,16 @@
             };
         }
 
+        internal void ClearParsers()
+        {
+            directoryParsers.Clear();
+        }
+
+        internal void AddParser(IListDirectoryParser parser)
+        {
+            directoryParsers.Add(parser);
+        }
+
         private void EnsureLoggedIn()
         {
             if ( !ftpClient.IsConnected || !ftpClient.IsAuthenticated )

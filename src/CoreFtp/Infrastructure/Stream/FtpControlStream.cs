@@ -469,6 +469,9 @@
             if (Configuration.IgnoreCertificateErrors)
                 return true;
 
+            if (Configuration.ServerCertificateValidationCallback != null)
+                return Configuration.ServerCertificateValidationCallback(certificate, chain, errors);
+
             return errors == SslPolicyErrors.None;
         }
 
