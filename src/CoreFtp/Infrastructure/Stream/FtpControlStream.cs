@@ -498,6 +498,7 @@
             }
             finally
             {
+                Socket?.Close();
                 Socket = null;
                 BaseStream = null;
             }
