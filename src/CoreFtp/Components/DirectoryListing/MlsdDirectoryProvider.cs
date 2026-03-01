@@ -65,23 +65,14 @@
             }
         }
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodeTypeEnumerableAsync( null, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodeTypeEnumerableAsync( null, cancellationToken );
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodeTypeEnumerableAsync( FtpNodeType.File, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodeTypeEnumerableAsync( FtpNodeType.File, cancellationToken );
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodeTypeEnumerableAsync( FtpNodeType.Directory, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodeTypeEnumerableAsync( FtpNodeType.Directory, cancellationToken );
 
         /// <summary>
         /// Lists all nodes (files and directories) in the current working directory

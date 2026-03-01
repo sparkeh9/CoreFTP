@@ -83,23 +83,14 @@
             }
         }
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodesEnumerableAsync( null, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( null, cancellationToken );
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodesEnumerableAsync( FtpNodeType.File, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( FtpNodeType.File, cancellationToken );
 
-        public override async IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
-        {
-            await foreach ( var node in ListNodesEnumerableAsync( FtpNodeType.Directory, cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-        }
+        public override IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( FtpNodeType.Directory, cancellationToken );
 
         /// <summary>
         /// Lists all nodes (files and directories) in the current working directory
@@ -149,6 +140,8 @@
             try
             {
                 stream = await ftpClient.ConnectDataStreamAsync();
+                if ( stream == null )
+                    throw new FtpException( "Could not establish a data connection" );
 
                 var result = await ftpClient.ControlStream.SendCommandAsync( new FtpCommandEnvelope
                 {
@@ -185,6 +178,7 @@
             finally
             {
                 stream?.Dispose();
+                stream = null;
                 ftpClient.dataSocketSemaphore.Release();
             }
         }

@@ -432,10 +432,15 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Streaming all nodes in {WorkingDirectory}" );
 
-            await foreach ( var node in directoryProvider.ListAllEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-
-            await ControlStream.GetResponseAsync();
+            try
+            {
+                await foreach ( var node in directoryProvider.ListAllEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -448,10 +453,15 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Streaming files in {WorkingDirectory}" );
 
-            await foreach ( var node in directoryProvider.ListFilesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-
-            await ControlStream.GetResponseAsync();
+            try
+            {
+                await foreach ( var node in directoryProvider.ListFilesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
         }
 
         /// <summary>
@@ -464,10 +474,15 @@
             EnsureLoggedIn();
             Logger?.LogDebug( $"[FtpClient] Streaming directories in {WorkingDirectory}" );
 
-            await foreach ( var node in directoryProvider.ListDirectoriesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
-                yield return node;
-
-            await ControlStream.GetResponseAsync();
+            try
+            {
+                await foreach ( var node in directoryProvider.ListDirectoriesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
         }
 
 
