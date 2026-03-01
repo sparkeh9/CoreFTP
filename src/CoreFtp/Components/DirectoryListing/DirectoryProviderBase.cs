@@ -16,35 +16,20 @@ namespace CoreFtp.Components.DirectoryListing
         protected ILogger logger;
         protected Stream stream;
 
-        protected IEnumerable<string> RetrieveDirectoryListing()
+        protected async Task<List<string>> RetrieveDirectoryListingAsync()
         {
-            string line;
-            while ( ( line = ReadLine( ftpClient.ControlStream.Encoding ) ) != null )
+            var lines = new List<string>();
+            using (var reader = new StreamReader(stream, ftpClient.ControlStream.Encoding))
             {
-                logger?.LogDebug( line );
-                yield return line;
-            }
-        }
-
-        protected string ReadLine( Encoding encoding )
-        {
-            if ( encoding == null )
-                throw new ArgumentNullException( nameof( encoding ) );
-
-            var data = new List<byte>();
-            var buf = new byte[1];
-            string line = null;
-
-            while ( stream.Read( buf, 0, buf.Length ) > 0 )
-            {
-                data.Add( buf[ 0 ] );
-                if ( (char) buf[ 0 ] != '\n' )
-                    continue;
-                line = encoding.GetString( data.ToArray() ).Trim( '\r', '\n' );
-                break;
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    logger?.LogDebug(line);
+                    lines.Add(line);
+                }
             }
 
-            return line;
+            return lines;
         }
 
         public virtual Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()

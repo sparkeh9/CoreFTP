@@ -23,31 +23,47 @@ namespace CoreFtp.Infrastructure.Stream
         private bool accepted;
         private bool disposed;
 
-        public ActiveDataStream( TcpListener listener, FtpControlStream controlStream, ILogger logger )
+        public ActiveDataStream(TcpListener listener, FtpControlStream controlStream, ILogger logger)
         {
-            this.listener = listener ?? throw new ArgumentNullException( nameof( listener ) );
-            this.controlStream = controlStream ?? throw new ArgumentNullException( nameof( controlStream ) );
+            this.listener = listener ?? throw new ArgumentNullException(nameof(listener));
+            this.controlStream = controlStream ?? throw new ArgumentNullException(nameof(controlStream));
             this.logger = logger;
         }
 
-        private async Task EnsureAcceptedAsync()
+        private async Task EnsureAcceptedAsync(CancellationToken cancellationToken = default)
         {
-            if ( accepted )
+            if (accepted)
                 return;
 
-            logger?.LogDebug( "[ActiveDataStream] Accepting inbound data connection from server" );
-            acceptedClient = await listener.AcceptTcpClientAsync();
-            innerStream = await controlStream.WrapDataStreamAsync( acceptedClient );
+            logger?.LogDebug("[ActiveDataStream] Accepting inbound data connection from server");
+
+            var timeoutTask = Task.Delay(controlStream.Configuration.TimeoutSeconds * 1000, cancellationToken);
+            var acceptTask = listener.AcceptTcpClientAsync();
+
+            var completedTask = await Task.WhenAny(acceptTask, timeoutTask);
+            if (completedTask == timeoutTask)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                throw new TimeoutException("Timeout waiting for Active mode data connection.");
+            }
+
+            acceptedClient = await acceptTask;
+
+            // Validate source IP to prevent data connection hijacking
+            var remoteEndpoint = acceptedClient.Client.RemoteEndPoint as System.Net.IPEndPoint;
+            var controlEndpoint = controlStream.RemoteEndPoint;
+
+            if (remoteEndpoint != null && controlEndpoint != null &&
+                !remoteEndpoint.Address.Equals(controlEndpoint.Address))
+            {
+                acceptedClient.Dispose();
+                throw new FtpException(
+                    $"Rejected active data connection from unexpected source IP: {remoteEndpoint.Address}");
+            }
+
+            innerStream = await controlStream.WrapDataStreamAsync(acceptedClient);
             accepted = true;
-            logger?.LogDebug( "[ActiveDataStream] Data connection accepted" );
-        }
-
-        private void EnsureAccepted()
-        {
-            if ( accepted )
-                return;
-
-            EnsureAcceptedAsync().GetAwaiter().GetResult();
+            logger?.LogDebug("[ActiveDataStream] Data connection accepted");
         }
 
         public override bool CanRead => true;
@@ -61,48 +77,77 @@ namespace CoreFtp.Infrastructure.Stream
             set => throw new NotSupportedException();
         }
 
-        public override int Read( byte[] buffer, int offset, int count )
+        public override int Read(byte[] buffer, int offset, int count)
         {
-            EnsureAccepted();
-            return innerStream.Read( buffer, offset, count );
+            throw new NotSupportedException(
+                "Synchronous operations are not supported on this stream. Use ReadAsync instead.");
         }
 
-        public override async Task<int> ReadAsync( byte[] buffer, int offset, int count, CancellationToken cancellationToken )
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count,
+            CancellationToken cancellationToken)
         {
-            await EnsureAcceptedAsync();
-            return await innerStream.ReadAsync( buffer, offset, count, cancellationToken );
+            await EnsureAcceptedAsync(cancellationToken);
+            return await innerStream.ReadAsync(buffer, offset, count, cancellationToken);
         }
 
-        public override void Write( byte[] buffer, int offset, int count )
+        public override void Write(byte[] buffer, int offset, int count)
         {
-            EnsureAccepted();
-            innerStream.Write( buffer, offset, count );
+            throw new NotSupportedException(
+                "Synchronous operations are not supported on this stream. Use WriteAsync instead.");
         }
 
-        public override async Task WriteAsync( byte[] buffer, int offset, int count, CancellationToken cancellationToken )
+        public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            await EnsureAcceptedAsync();
-            await innerStream.WriteAsync( buffer, offset, count, cancellationToken );
+            await EnsureAcceptedAsync(cancellationToken);
+            await innerStream.WriteAsync(buffer, offset, count, cancellationToken);
         }
+
+#if !NETSTANDARD2_0 && !NET462
+        public override int Read(Span<byte> buffer)
+        {
+            throw new NotSupportedException(
+                "Synchronous operations are not supported on this stream. Use ReadAsync instead.");
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            await EnsureAcceptedAsync(cancellationToken);
+            return await innerStream.ReadAsync(buffer, cancellationToken);
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            throw new NotSupportedException(
+                "Synchronous operations are not supported on this stream. Use WriteAsync instead.");
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer,
+            CancellationToken cancellationToken = default)
+        {
+            await EnsureAcceptedAsync(cancellationToken);
+            await innerStream.WriteAsync(buffer, cancellationToken);
+        }
+#endif
 
         public override void Flush()
         {
             innerStream?.Flush();
         }
 
-        public override long Seek( long offset, SeekOrigin origin )
+        public override long Seek(long offset, SeekOrigin origin)
         {
             throw new NotSupportedException();
         }
 
-        public override void SetLength( long value )
+        public override void SetLength(long value)
         {
             throw new NotSupportedException();
         }
 
-        protected override void Dispose( bool disposing )
+        protected override void Dispose(bool disposing)
         {
-            if ( !disposed && disposing )
+            if (!disposed && disposing)
             {
                 innerStream?.Dispose();
                 acceptedClient?.Dispose();
@@ -110,7 +155,7 @@ namespace CoreFtp.Infrastructure.Stream
                 disposed = true;
             }
 
-            base.Dispose( disposing );
+            base.Dispose(disposing);
         }
     }
 }
