@@ -18,35 +18,35 @@ namespace CoreFtp.Components.DirectoryListing
         protected ILogger logger;
         protected Stream stream;
 
-        protected IEnumerable<string> RetrieveDirectoryListing()
+        protected async Task<List<string>> RetrieveDirectoryListingAsync()
         {
-            string line;
-            while ( ( line = ReadLine( ftpClient.ControlStream.Encoding ) ) != null )
+            var lines = new List<string>();
+            using (var reader = new StreamReader(stream, ftpClient.ControlStream.Encoding))
             {
-                logger?.LogDebug( line );
-                yield return line;
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    logger?.LogDebug(line);
+                    lines.Add(line);
+                }
             }
+
+            return lines;
         }
 
-        protected string ReadLine( Encoding encoding )
+        protected async IAsyncEnumerable<string> RetrieveDirectoryListingEnumerableAsync(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            if ( encoding == null )
-                throw new ArgumentNullException( nameof( encoding ) );
-
-            var data = new List<byte>();
-            var buf = new byte[1];
-            string line = null;
-
-            while ( stream.Read( buf, 0, buf.Length ) > 0 )
+            using (var reader = new StreamReader(stream, ftpClient.ControlStream.Encoding))
             {
-                data.Add( buf[ 0 ] );
-                if ( (char) buf[ 0 ] != '\n' )
-                    continue;
-                line = encoding.GetString( data.ToArray() ).Trim( '\r', '\n' );
-                break;
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    logger?.LogDebug(line);
+                    yield return line;
+                }
             }
-
-            return line;
         }
 
         public virtual Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
@@ -64,17 +64,20 @@ namespace CoreFtp.Components.DirectoryListing
             throw new NotImplementedException();
         }
 
-        public virtual IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync(
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
-        public virtual IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync(
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }
 
-        public virtual IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync(
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

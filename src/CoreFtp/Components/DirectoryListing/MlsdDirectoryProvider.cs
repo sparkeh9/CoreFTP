@@ -13,7 +13,7 @@
 
     internal class MlsdDirectoryProvider : DirectoryProviderBase
     {
-        public MlsdDirectoryProvider( FtpClient ftpClient, ILogger logger, FtpClientConfiguration configuration )
+        public MlsdDirectoryProvider(FtpClient ftpClient, ILogger logger, FtpClientConfiguration configuration)
         {
             this.ftpClient = ftpClient;
             this.configuration = configuration;
@@ -22,8 +22,8 @@
 
         private void EnsureLoggedIn()
         {
-            if ( !ftpClient.IsConnected || !ftpClient.IsAuthenticated )
-                throw new FtpException( "User must be logged in" );
+            if (!ftpClient.IsConnected || !ftpClient.IsAuthenticated)
+                throw new FtpException("User must be logged in");
         }
 
         public override async Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
@@ -44,7 +44,7 @@
             try
             {
                 await ftpClient.dataSocketSemaphore.WaitAsync();
-                return await ListNodeTypeAsync( FtpNodeType.File );
+                return await ListNodeTypeAsync(FtpNodeType.File);
             }
             finally
             {
@@ -57,7 +57,7 @@
             try
             {
                 await ftpClient.dataSocketSemaphore.WaitAsync();
-                return await ListNodeTypeAsync( FtpNodeType.Directory );
+                return await ListNodeTypeAsync(FtpNodeType.Directory);
             }
             finally
             {
@@ -65,21 +65,24 @@
             }
         }
 
-        public override IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
-            => ListNodeTypeEnumerableAsync( null, cancellationToken );
+        public override IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync(
+            CancellationToken cancellationToken = default)
+            => ListNodeTypeEnumerableAsync(null, cancellationToken);
 
-        public override IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
-            => ListNodeTypeEnumerableAsync( FtpNodeType.File, cancellationToken );
+        public override IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync(
+            CancellationToken cancellationToken = default)
+            => ListNodeTypeEnumerableAsync(FtpNodeType.File, cancellationToken);
 
-        public override IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
-            => ListNodeTypeEnumerableAsync( FtpNodeType.Directory, cancellationToken );
+        public override IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync(
+            CancellationToken cancellationToken = default)
+            => ListNodeTypeEnumerableAsync(FtpNodeType.Directory, cancellationToken);
 
         /// <summary>
         /// Lists all nodes (files and directories) in the current working directory
         /// </summary>
         /// <param name="ftpNodeType"></param>
         /// <returns></returns>
-        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync( FtpNodeType? ftpNodeType = null )
+        private async Task<ReadOnlyCollection<FtpNodeInformation>> ListNodeTypeAsync(FtpNodeType? ftpNodeType = null)
         {
             string nodeTypeString = !ftpNodeType.HasValue
                 ? "all"
@@ -87,26 +90,28 @@
                     ? "file"
                     : "dir";
 
-            logger?.LogDebug( $"[MlsdDirectoryProvider] Listing {ftpNodeType}" );
+            logger?.LogDebug($"[MlsdDirectoryProvider] Listing {ftpNodeType}");
 
             EnsureLoggedIn();
 
             try
             {
                 stream = await ftpClient.ConnectDataStreamAsync();
-                if ( stream == null )
-                    throw new FtpException( "Could not establish a data connection" );
+                if (stream == null)
+                    throw new FtpException("Could not establish a data connection");
 
-                var result = await ftpClient.ControlStream.SendCommandAsync( FtpCommand.MLSD );
-                if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) && ( result.FtpStatusCode != FtpStatusCode.ClosingData ) )
-                    throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
+                var result = await ftpClient.ControlStream.SendCommandAsync(FtpCommand.MLSD);
+                if ((result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen) &&
+                    (result.FtpStatusCode != FtpStatusCode.OpeningData) &&
+                    (result.FtpStatusCode != FtpStatusCode.ClosingData))
+                    throw new FtpException("Could not retrieve directory listing " + result.ResponseMessage);
 
-                var directoryListing = RetrieveDirectoryListing().ToList();
+                var directoryListing = await RetrieveDirectoryListingAsync();
 
-                var nodes = ( from node in directoryListing
-                              where !node.IsNullOrWhiteSpace()
-                              where !ftpNodeType.HasValue || node.Contains( $"type={nodeTypeString}" )
-                              select node.ToFtpNode() )
+                var nodes = (from node in directoryListing
+                        where !node.IsNullOrWhiteSpace()
+                        where !ftpNodeType.HasValue || node.Contains($"type={nodeTypeString}")
+                        select node.ToFtpNode())
                     .ToList();
 
 
@@ -122,7 +127,8 @@
         /// <summary>
         /// Streams nodes as they are parsed from the MLSD response
         /// </summary>
-        private async IAsyncEnumerable<FtpNodeInformation> ListNodeTypeEnumerableAsync( FtpNodeType? ftpNodeType, [EnumeratorCancellation] CancellationToken cancellationToken )
+        private async IAsyncEnumerable<FtpNodeInformation> ListNodeTypeEnumerableAsync(FtpNodeType? ftpNodeType,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             string nodeTypeString = !ftpNodeType.HasValue
                 ? "all"
@@ -130,29 +136,29 @@
                     ? "file"
                     : "dir";
 
-            logger?.LogDebug( $"[MlsdDirectoryProvider] Streaming {ftpNodeType}" );
+            logger?.LogDebug($"[MlsdDirectoryProvider] Streaming {ftpNodeType}");
 
             EnsureLoggedIn();
 
-            await ftpClient.dataSocketSemaphore.WaitAsync( cancellationToken );
+            await ftpClient.dataSocketSemaphore.WaitAsync(cancellationToken);
             try
             {
                 stream = await ftpClient.ConnectDataStreamAsync();
-                if ( stream == null )
-                    throw new FtpException( "Could not establish a data connection" );
+                if (stream == null)
+                    throw new FtpException("Could not establish a data connection");
 
-                var result = await ftpClient.ControlStream.SendCommandAsync( FtpCommand.MLSD );
-                if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) && ( result.FtpStatusCode != FtpStatusCode.ClosingData ) )
-                    throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
+                var result = await ftpClient.ControlStream.SendCommandAsync(FtpCommand.MLSD);
+                if ((result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen) &&
+                    (result.FtpStatusCode != FtpStatusCode.OpeningData) &&
+                    (result.FtpStatusCode != FtpStatusCode.ClosingData))
+                    throw new FtpException("Could not retrieve directory listing " + result.ResponseMessage);
 
-                foreach ( string line in RetrieveDirectoryListing() )
+                await foreach (string line in RetrieveDirectoryListingEnumerableAsync(cancellationToken))
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if ( line.IsNullOrWhiteSpace() )
+                    if (line.IsNullOrWhiteSpace())
                         continue;
 
-                    if ( ftpNodeType.HasValue && !line.Contains( $"type={nodeTypeString}" ) )
+                    if (ftpNodeType.HasValue && !line.Contains($"type={nodeTypeString}"))
                         continue;
 
                     yield return line.ToFtpNode();

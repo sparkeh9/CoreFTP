@@ -18,7 +18,7 @@
 
     public class FtpControlStream : Stream
     {
-        protected readonly FtpClientConfiguration Configuration;
+        internal readonly FtpClientConfiguration Configuration;
         public ILogger Logger;
         protected readonly IDnsResolver dnsResolver;
         protected Socket Socket;
@@ -36,6 +36,20 @@
 
         internal bool IsDataConnection { get; set; }
 
+        /// <summary>
+        /// Returns the local IP address of the control connection socket.
+        /// Used by Active mode to determine the IP to advertise in PORT commands.
+        /// </summary>
+        internal string LocalIpAddress
+        {
+            get
+            {
+                if (Socket?.LocalEndPoint is System.Net.IPEndPoint localEndPoint)
+                    return localEndPoint.Address.ToString();
+                return null;
+            }
+        }
+
         internal void SetTimeouts(int milliseconds)
         {
             BaseStream.ReadTimeout = milliseconds;
@@ -47,6 +61,8 @@
             BaseStream.ReadTimeout = Configuration.TimeoutSeconds * 1000;
             BaseStream.WriteTimeout = Configuration.TimeoutSeconds * 1000;
         }
+
+        internal System.Net.IPEndPoint RemoteEndPoint => Socket?.RemoteEndPoint as System.Net.IPEndPoint;
 
         public FtpControlStream(FtpClientConfiguration configuration, IDnsResolver dnsResolver)
         {
@@ -141,8 +157,6 @@
         }
 
 
-
-
         public override void Write(byte[] buffer, int offset, int count)
         {
             NetworkStream?.Write(buffer, offset, count);
@@ -222,6 +236,7 @@
                         throw new FtpException("Line length limit exceeded");
                     continue;
                 }
+
                 line = encoding.GetString(data.ToArray()).Trim('\r', '\n');
                 break;
             }
@@ -336,6 +351,29 @@
             var socketStream = new FtpControlStream(Configuration, dnsResolver)
                 { Logger = Logger, IsDataConnection = true };
             await socketStream.ConnectStreamAsync(host, port, token);
+
+            if (IsEncrypted)
+            {
+                await socketStream.ActivateEncryptionAsync();
+            }
+
+            return socketStream;
+        }
+
+        /// <summary>
+        /// Wraps an accepted TcpClient (from Active mode) into a data connection stream.
+        /// Applies TLS if the control connection is encrypted.
+        /// </summary>
+        internal async Task<Stream> WrapDataStreamAsync(System.Net.Sockets.TcpClient acceptedClient)
+        {
+            Logger?.LogDebug("[FtpSocketStream] Wrapping accepted data connection");
+            var socketStream = new FtpControlStream(Configuration, dnsResolver)
+                { Logger = Logger, IsDataConnection = true };
+
+            socketStream.Socket = acceptedClient.Client;
+            socketStream.Socket.ReceiveTimeout = Configuration.TimeoutSeconds * 1000;
+            socketStream.Socket.LingerState = new LingerOption(true, 0);
+            socketStream.BaseStream = new NetworkStream(acceptedClient.Client);
 
             if (IsEncrypted)
             {
