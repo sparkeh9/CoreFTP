@@ -16,29 +16,29 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
 
     public class ActiveModeTests : IDisposable
     {
-        private readonly ILogger _logger;
-        private readonly TcpListener _controlListener;
-        private readonly int _controlPort;
+        private readonly ILogger logger;
+        private readonly TcpListener controlListener;
+        private readonly int controlPort;
 
         public ActiveModeTests(ITestOutputHelper outputHelper)
         {
             var factory = LoggerFactory.Create(builder =>
                 builder.AddProvider(new XunitLoggerProvider(outputHelper)));
-            _logger = factory.CreateLogger<ActiveModeTests>();
+            logger = factory.CreateLogger<ActiveModeTests>();
 
-            _controlListener = new TcpListener(IPAddress.Loopback, 0);
-            _controlListener.Start();
-            _controlPort = ((IPEndPoint)_controlListener.LocalEndpoint).Port;
+            controlListener = new TcpListener(IPAddress.Loopback, 0);
+            controlListener.Start();
+            controlPort = ((IPEndPoint)controlListener.LocalEndpoint).Port;
         }
 
         public void Dispose()
         {
-            _controlListener.Stop();
+            controlListener.Stop();
         }
 
         private async Task RunFakeFtpServer(Func<StreamReader, StreamWriter, Task> handler)
         {
-            using (var client = await _controlListener.AcceptTcpClientAsync())
+            using (var client = await controlListener.AcceptTcpClientAsync())
             using (var stream = client.GetStream())
             using (var reader = new StreamReader(stream, Encoding.ASCII))
             using (var writer = new StreamWriter(stream, Encoding.ASCII) { AutoFlush = true })
@@ -121,14 +121,14 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
             var config = new FtpClientConfiguration
             {
                 Host = "localhost",
-                Port = _controlPort,
+                Port = controlPort,
                 Username = "test",
                 Password = "pwd",
                 DataConnectionType = FtpDataConnectionType.Active,
                 ActiveExternalIp = "127.0.0.1"
             };
 
-            using (var client = new FtpClient(config) { Logger = _logger })
+            using (var client = new FtpClient(config) { Logger = logger })
             {
                 await client.LoginAsync();
 
@@ -195,14 +195,14 @@ namespace CoreFtp.Tests.Integration.FtpClientTests
             var config = new FtpClientConfiguration
             {
                 Host = "localhost",
-                Port = _controlPort,
+                Port = controlPort,
                 Username = "test",
                 Password = "pwd",
                 DataConnectionType = FtpDataConnectionType.Active,
                 ActiveExternalIp = "127.0.0.1"
             };
 
-            using (var client = new FtpClient(config) { Logger = _logger })
+            using (var client = new FtpClient(config) { Logger = logger })
             {
                 await client.LoginAsync();
 
