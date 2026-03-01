@@ -1,5 +1,7 @@
 ﻿namespace CoreFtp
 {
+    using System;
+    using System.Net.Security;
     using System.Security.Authentication;
     using System.Security.Cryptography.X509Certificates;
     using Enum;
@@ -26,5 +28,24 @@
 
         public X509CertificateCollection ClientCertificates { get; set; } = new X509CertificateCollection();
         public SslProtocols SslProtocols { get; set; } = SslProtocols.None;
+
+        /// <summary>
+        /// Base encoding to use for the control stream. Useful for legacy servers that use Shift_JIS, GBK, etc.
+        /// </summary>
+        public System.Text.Encoding BaseEncoding { get; set; } = System.Text.Encoding.ASCII;
+
+        /// <summary>
+        /// Allows overriding the server certificate validation logic (e.g., verifying a specific self-signed certificate thumbprint).
+        /// Note: This callback is only invoked when <see cref="IgnoreCertificateErrors"/> is set to <c>false</c>.
+        /// When <see cref="IgnoreCertificateErrors"/> is <c>true</c> (the default), certificate errors are ignored and this callback is not used.
+        /// </summary>
+        public Func<X509Certificate, X509Chain, SslPolicyErrors, bool> ServerCertificateValidationCallback { get; set; }
+
+        /// <summary>
+        /// Allows overriding the detected server file system / directory listing format.
+        /// Useful when the server does not advertise MLSD in its FEAT response (causing a fallback to LIST),
+        /// and the automatic detection of the LIST output format fails (e.g. force FtpFileSystemType.Windows).
+        /// </summary>
+        public FtpFileSystemType? ForceFileSystem { get; set; }
     }
 }

@@ -80,5 +80,33 @@ using ( var ftpClient = new FtpClient( new FtpClientConfiguration
 
 ```
 
+### Advanced Configuration ###
+CoreFTP provides several configuration overrides in `FtpClientConfiguration` to assist with connecting to legacy, obfuscated, or non-compliant FTP servers:
+
+```csharp
+using ( var ftpClient = new FtpClient( new FtpClientConfiguration
+{
+    Host = "legacy-server.local",
+    Username = "user",
+    Password = "password",
+    
+    // Force the control stream encoding for servers that don't support UTF8 (e.g. Chinese GBK or Japanese Shift_JIS)
+    BaseEncoding = System.Text.Encoding.GetEncoding("GBK"),
+    
+    // Force the directory listing parser if the server hides its OS in the FEAT response
+    ForceFileSystem = FtpFileSystemType.Windows,
+    
+    // Provide a custom callback to validate specific self-signed certificates
+    IgnoreCertificateErrors = false,
+    ServerCertificateValidationCallback = (cert, chain, errors) => 
+    {
+        return cert.GetCertHashString() == "EXPECTED_THUMBPRINT_HERE";
+    }
+} ) )
+{
+    await ftpClient.LoginAsync();
+}
+```
+
 ### Integration Tests ###
 Integration tests can be run against most FTP servers with passive mode enabled, credentials can be configured in appsettings.json of CoreFtp.Tests.Integration.

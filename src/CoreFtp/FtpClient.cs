@@ -60,8 +60,10 @@
                 configuration.Host = new Uri( configuration.Host ).Host;
             }
 
-
-            ControlStream = new FtpControlStream( Configuration, new DnsResolver() );
+            ControlStream = new FtpControlStream( Configuration, new DnsResolver() )
+            {
+                Encoding = Configuration.BaseEncoding
+            };
             Configuration.BaseDirectory = $"/{Configuration.BaseDirectory.TrimStart( '/' )}";
         }
 
@@ -490,8 +492,29 @@
         private IDirectoryProvider DetermineDirectoryProvider()
         {
             Logger?.LogTrace( "[FtpClient] Determining directory provider" );
+
             if ( this.UsesMlsd() )
                 return new MlsdDirectoryProvider( this, Logger, Configuration );
+
+            if ( Configuration.ForceFileSystem.HasValue )
+            {
+                var forcedProvider = new ListDirectoryProvider( this, Logger, Configuration );
+                forcedProvider.ClearParsers();
+                
+                switch ( Configuration.ForceFileSystem.Value )
+                {
+                    case FtpFileSystemType.Windows:
+                        forcedProvider.AddParser( new Components.DirectoryListing.Parser.DosDirectoryParser( Logger ) );
+                        break;
+                    case FtpFileSystemType.Unix:
+                        forcedProvider.AddParser( new Components.DirectoryListing.Parser.UnixDirectoryParser( Logger ) );
+                        break;
+                    default:
+                        throw new NotSupportedException( $"Unsupported file system type: {Configuration.ForceFileSystem.Value}" );
+                }
+                
+                return forcedProvider;
+            }
 
             return new ListDirectoryProvider( this, Logger, Configuration );
         }
