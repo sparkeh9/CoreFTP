@@ -36,6 +36,20 @@
 
         internal bool IsDataConnection { get; set; }
 
+        /// <summary>
+        /// Returns the local IP address of the control connection socket.
+        /// Used by Active mode to determine the IP to advertise in PORT commands.
+        /// </summary>
+        internal string LocalIpAddress
+        {
+            get
+            {
+                if ( Socket?.LocalEndPoint is System.Net.IPEndPoint localEndPoint )
+                    return localEndPoint.Address.ToString();
+                return null;
+            }
+        }
+
         internal void SetTimeouts(int milliseconds)
         {
             BaseStream.ReadTimeout = milliseconds;
@@ -338,6 +352,27 @@
             await socketStream.ConnectStreamAsync(host, port, token);
 
             if (IsEncrypted)
+            {
+                await socketStream.ActivateEncryptionAsync();
+            }
+
+            return socketStream;
+        }
+
+        /// <summary>
+        /// Wraps an accepted TcpClient (from Active mode) into a data connection stream.
+        /// Applies TLS if the control connection is encrypted.
+        /// </summary>
+        public async Task<Stream> WrapDataStreamAsync( System.Net.Sockets.TcpClient acceptedClient )
+        {
+            Logger?.LogDebug( "[FtpSocketStream] Wrapping accepted data connection" );
+            var socketStream = new FtpControlStream( Configuration, dnsResolver )
+                { Logger = Logger, IsDataConnection = true };
+
+            socketStream.Socket = acceptedClient.Client;
+            socketStream.BaseStream = new NetworkStream( acceptedClient.Client );
+
+            if ( IsEncrypted )
             {
                 await socketStream.ActivateEncryptionAsync();
             }

@@ -47,5 +47,19 @@
         /// and the automatic detection of the LIST output format fails (e.g. force FtpFileSystemType.Windows).
         /// </summary>
         public FtpFileSystemType? ForceFileSystem { get; set; }
+
+        /// <summary>
+        /// Specifies the FTP data connection type. Default is <see cref="FtpDataConnectionType.AutoPassive"/>
+        /// which uses EPSV/PASV (client connects to server's data port).
+        /// Set to <see cref="FtpDataConnectionType.Active"/> to use PORT/EPRT (server connects back to client).
+        /// </summary>
+        public FtpDataConnectionType DataConnectionType { get; set; } = FtpDataConnectionType.AutoPassive;
+
+        /// <summary>
+        /// The external IP address to advertise in Active mode PORT/EPRT commands.
+        /// Required when the client is behind NAT and the server cannot reach the client's local IP.
+        /// If null, the local IP address of the control connection socket is used.
+        /// </summary>
+        public string ActiveExternalIp { get; set; }
     }
 }

@@ -630,12 +630,23 @@
         }
 
         /// <summary>
-        /// Produces a data socket using Passive (PASV) or Extended Passive (EPSV) mode
+        /// Produces a data socket using Passive (PASV/EPSV) or Active (PORT/EPRT) mode
         /// </summary>
         /// <returns></returns>
         internal async Task<Stream> ConnectDataStreamAsync()
         {
-            Logger?.LogTrace( "[FtpClient] Connecting to a data socket" );
+            if ( Configuration.DataConnectionType == FtpDataConnectionType.Active )
+                return await ConnectActiveDataStreamAsync();
+
+            return await ConnectPassiveDataStreamAsync();
+        }
+
+        /// <summary>
+        /// Produces a data socket using Passive (PASV) or Extended Passive (EPSV) mode
+        /// </summary>
+        private async Task<Stream> ConnectPassiveDataStreamAsync()
+        {
+            Logger?.LogTrace( "[FtpClient] Connecting passive data socket" );
 
             var epsvResult = await ControlStream.SendCommandAsync( FtpCommand.EPSV );
 
@@ -658,6 +669,54 @@
                 throw new FtpException( "Could not determine EPSV/PASV data port" );
 
             return await ControlStream.OpenDataStreamAsync( Configuration.Host, passivePortNumber.Value, CancellationToken.None );
+        }
+
+        /// <summary>
+        /// Produces a data socket using Active (PORT/EPRT) mode.
+        /// Binds a local TcpListener, sends PORT, and returns a lazy-accept stream that
+        /// accepts the server's inbound connection on the first read (after LIST/STOR is sent).
+        /// </summary>
+        private async Task<Stream> ConnectActiveDataStreamAsync()
+        {
+            Logger?.LogTrace( "[FtpClient] Connecting active data socket" );
+
+            var localIp = Configuration.ActiveExternalIp ?? ControlStream.LocalIpAddress;
+            if ( string.IsNullOrEmpty( localIp ) )
+                throw new FtpException( "Could not determine local IP address for Active mode. Set ActiveExternalIp in configuration." );
+
+            var listener = new System.Net.Sockets.TcpListener( System.Net.IPAddress.Any, 0 );
+            listener.Start();
+
+            int localPort = ( (System.Net.IPEndPoint) listener.LocalEndpoint ).Port;
+
+            // Send PORT command: PORT h1,h2,h3,h4,p1,p2
+            string portCommand = FormatPortCommand( localIp, localPort );
+            var portResult = await ControlStream.SendCommandAsync( new FtpCommandEnvelope
+            {
+                FtpCommand = FtpCommand.PORT,
+                Data = portCommand
+            } );
+
+            if ( portResult.FtpStatusCode != FtpStatusCode.CommandOK )
+            {
+                listener.Stop();
+                throw new FtpException( "PORT command failed: " + portResult.ResponseMessage );
+            }
+
+            // Return a lazy-accept stream — the actual accept happens when the caller
+            // first reads from the stream (i.e. after LIST/STOR has been sent)
+            return new Infrastructure.Stream.ActiveDataStream( listener, ControlStream, Logger );
+        }
+
+        /// <summary>
+        /// Formats an IP and port into PORT command arguments: h1,h2,h3,h4,p1,p2
+        /// </summary>
+        private static string FormatPortCommand( string ip, int port )
+        {
+            string ipPart = ip.Replace( '.', ',' );
+            int highByte = port / 256;
+            int lowByte = port % 256;
+            return $"{ipPart},{highByte},{lowByte}";
         }
 
         /// <summary>
