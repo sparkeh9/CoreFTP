@@ -4,7 +4,9 @@ namespace CoreFtp.Components.DirectoryListing
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Infrastructure;
     using Microsoft.Extensions.Logging;
@@ -32,6 +34,21 @@ namespace CoreFtp.Components.DirectoryListing
             return lines;
         }
 
+        protected async IAsyncEnumerable<string> RetrieveDirectoryListingEnumerableAsync(
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            using (var reader = new StreamReader(stream, ftpClient.ControlStream.Encoding))
+            {
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    logger?.LogDebug(line);
+                    yield return line;
+                }
+            }
+        }
+
         public virtual Task<ReadOnlyCollection<FtpNodeInformation>> ListAllAsync()
         {
             throw new NotImplementedException();
@@ -43,6 +60,24 @@ namespace CoreFtp.Components.DirectoryListing
         }
 
         public virtual Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync(
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync(
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync(
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

@@ -6,6 +6,7 @@
     <AssemblyTitle>CoreFTP</AssemblyTitle>
 
     <Authors>Nick Briscoe</Authors>
+    <LangVersion>latest</LangVersion>
     <TargetFrameworks>net10.0;net462;netstandard2.0</TargetFrameworks>
     <AssemblyName>CoreFtp</AssemblyName>
     <PackageId>CoreFtp</PackageId>
@@ -22,6 +23,8 @@
     <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.0"
+                      Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'net462'" />
   </ItemGroup>
 
   <Target Name="PostcompileScript" AfterTargets="Build" Condition=" '$(IsCrossTargetingBuild)' != 'true' ">
