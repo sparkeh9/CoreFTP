@@ -122,7 +122,9 @@
             if ( !lines.Any() )
                 yield break;
 
-            var parser = directoryParsers.FirstOrDefault( x => x.Test( lines[ 0 ] ) );
+            var parser = directoryParsers.Count == 1 
+                ? directoryParsers[ 0 ]
+                : directoryParsers.FirstOrDefault( x => x.Test( lines[ 0 ] ) );
 
             if ( parser == null )
                 yield break;

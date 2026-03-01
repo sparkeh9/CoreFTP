@@ -36,11 +36,15 @@
 
         /// <summary>
         /// Allows overriding the server certificate validation logic (e.g., verifying a specific self-signed certificate thumbprint).
+        /// Note: This callback is only invoked when <see cref="IgnoreCertificateErrors"/> is set to <c>false</c>.
+        /// When <see cref="IgnoreCertificateErrors"/> is <c>true</c> (the default), certificate errors are ignored and this callback is not used.
         /// </summary>
         public Func<X509Certificate, X509Chain, SslPolicyErrors, bool> ServerCertificateValidationCallback { get; set; }
 
         /// <summary>
-        /// Allows overriding the OS directory provider. Useful if the server does not report its OS in FEAT (e.g. FtpFileSystemType.Windows).
+        /// Allows overriding the detected server file system / directory listing format.
+        /// Useful when the server does not advertise MLSD in its FEAT response (causing a fallback to LIST),
+        /// and the automatic detection of the LIST output format fails (e.g. force FtpFileSystemType.Windows).
         /// </summary>
         public FtpFileSystemType? ForceFileSystem { get; set; }
     }

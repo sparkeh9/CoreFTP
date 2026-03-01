@@ -493,21 +493,28 @@
         {
             Logger?.LogTrace( "[FtpClient] Determining directory provider" );
 
+            if ( this.UsesMlsd() )
+                return new MlsdDirectoryProvider( this, Logger, Configuration );
+
             if ( Configuration.ForceFileSystem.HasValue )
             {
                 var forcedProvider = new ListDirectoryProvider( this, Logger, Configuration );
                 forcedProvider.ClearParsers();
                 
-                if ( Configuration.ForceFileSystem.Value == FtpFileSystemType.Windows )
-                    forcedProvider.AddParser( new Components.DirectoryListing.Parser.DosDirectoryParser( Logger ) );
-                else
-                    forcedProvider.AddParser( new Components.DirectoryListing.Parser.UnixDirectoryParser( Logger ) );
+                switch ( Configuration.ForceFileSystem.Value )
+                {
+                    case FtpFileSystemType.Windows:
+                        forcedProvider.AddParser( new Components.DirectoryListing.Parser.DosDirectoryParser( Logger ) );
+                        break;
+                    case FtpFileSystemType.Unix:
+                        forcedProvider.AddParser( new Components.DirectoryListing.Parser.UnixDirectoryParser( Logger ) );
+                        break;
+                    default:
+                        throw new NotSupportedException( $"Unsupported file system type: {Configuration.ForceFileSystem.Value}" );
+                }
                 
                 return forcedProvider;
             }
-
-            if ( this.UsesMlsd() )
-                return new MlsdDirectoryProvider( this, Logger, Configuration );
 
             return new ListDirectoryProvider( this, Logger, Configuration );
         }
