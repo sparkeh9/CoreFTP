@@ -5,6 +5,7 @@
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -414,6 +415,69 @@
                 EnsureLoggedIn();
                 Logger?.LogDebug( $"[FtpClient] Listing directories in {WorkingDirectory}" );
                 return await directoryProvider.ListDirectoriesAsync();
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
+        }
+
+        /// <summary>
+        /// Streams all nodes in the current working directory as they are parsed from the server
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
+        {
+            EnsureLoggedIn();
+            Logger?.LogDebug( $"[FtpClient] Streaming all nodes in {WorkingDirectory}" );
+
+            try
+            {
+                await foreach ( var node in directoryProvider.ListAllEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
+        }
+
+        /// <summary>
+        /// Streams all files in the current working directory as they are parsed from the server
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
+        {
+            EnsureLoggedIn();
+            Logger?.LogDebug( $"[FtpClient] Streaming files in {WorkingDirectory}" );
+
+            try
+            {
+                await foreach ( var node in directoryProvider.ListFilesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
+            }
+            finally
+            {
+                await ControlStream.GetResponseAsync();
+            }
+        }
+
+        /// <summary>
+        /// Streams all directories in the current working directory as they are parsed from the server
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( [EnumeratorCancellation] CancellationToken cancellationToken = default )
+        {
+            EnsureLoggedIn();
+            Logger?.LogDebug( $"[FtpClient] Streaming directories in {WorkingDirectory}" );
+
+            try
+            {
+                await foreach ( var node in directoryProvider.ListDirectoriesEnumerableAsync( cancellationToken ).ConfigureAwait( false ) )
+                    yield return node;
             }
             finally
             {

@@ -4,7 +4,9 @@ namespace CoreFtp.Components.DirectoryListing
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
+    using System.Runtime.CompilerServices;
     using System.Text;
+    using System.Threading;
     using System.Threading.Tasks;
     using Infrastructure;
     using Microsoft.Extensions.Logging;
@@ -58,6 +60,21 @@ namespace CoreFtp.Components.DirectoryListing
         }
 
         public virtual Task<ReadOnlyCollection<FtpNodeInformation>> ListDirectoriesAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
+        {
+            throw new NotImplementedException();
+        }
+
+        public virtual IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
         {
             throw new NotImplementedException();
         }

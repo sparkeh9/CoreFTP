@@ -2,6 +2,8 @@
 {
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
+    using System.Runtime.CompilerServices;
+    using System.Threading;
     using System.Threading.Tasks;
     using Enum;
     using Infrastructure;
@@ -81,6 +83,15 @@
             }
         }
 
+        public override IAsyncEnumerable<FtpNodeInformation> ListAllEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( null, cancellationToken );
+
+        public override IAsyncEnumerable<FtpNodeInformation> ListFilesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( FtpNodeType.File, cancellationToken );
+
+        public override IAsyncEnumerable<FtpNodeInformation> ListDirectoriesEnumerableAsync( CancellationToken cancellationToken = default )
+            => ListNodesEnumerableAsync( FtpNodeType.Directory, cancellationToken );
+
         /// <summary>
         /// Lists all nodes (files and directories) in the current working directory
         /// </summary>
@@ -114,6 +125,61 @@
             finally
             {
                 stream.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Streams nodes as they are parsed from the LIST response
+        /// </summary>
+        private async IAsyncEnumerable<FtpNodeInformation> ListNodesEnumerableAsync( FtpNodeType? ftpNodeType, [EnumeratorCancellation] CancellationToken cancellationToken )
+        {
+            EnsureLoggedIn();
+            logger?.LogDebug( $"[ListDirectoryProvider] Streaming {ftpNodeType}" );
+
+            await ftpClient.dataSocketSemaphore.WaitAsync( cancellationToken );
+            try
+            {
+                stream = await ftpClient.ConnectDataStreamAsync();
+                if ( stream == null )
+                    throw new FtpException( "Could not establish a data connection" );
+
+                var result = await ftpClient.ControlStream.SendCommandAsync( new FtpCommandEnvelope
+                {
+                    FtpCommand = FtpCommand.LIST
+                } );
+
+                if ( ( result.FtpStatusCode != FtpStatusCode.DataAlreadyOpen ) && ( result.FtpStatusCode != FtpStatusCode.OpeningData ) )
+                    throw new FtpException( "Could not retrieve directory listing " + result.ResponseMessage );
+
+                IListDirectoryParser parser = null;
+                bool parserResolved = false;
+
+                foreach ( string line in RetrieveDirectoryListing() )
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if ( !parserResolved )
+                    {
+                        parser = directoryParsers.Count == 1
+                            ? directoryParsers[ 0 ]
+                            : directoryParsers.FirstOrDefault( x => x.Test( line ) );
+                        parserResolved = true;
+                    }
+
+                    if ( parser == null )
+                        yield break;
+
+                    var parsed = parser.Parse( line );
+
+                    if ( parsed != null && ( !ftpNodeType.HasValue || parsed.NodeType == ftpNodeType ) )
+                        yield return parsed;
+                }
+            }
+            finally
+            {
+                stream?.Dispose();
+                stream = null;
+                ftpClient.dataSocketSemaphore.Release();
             }
         }
 
